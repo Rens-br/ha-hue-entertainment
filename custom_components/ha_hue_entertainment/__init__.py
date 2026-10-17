@@ -15,7 +15,7 @@ from .core.engine import HueSyncEngine
 
 type HueEntertainmentConfigEntry = ConfigEntry[HueSyncEngine]
 
-PLATFORMS = [Platform.SELECT, Platform.SWITCH]
+PLATFORMS = [Platform.LIGHT, Platform.SELECT]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:

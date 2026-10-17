@@ -1,0 +1,20 @@
+set_colors:
+  target:
+    entity:
+      integration: ha_hue_entertainment
+      domain: light
+  fields:
+    channels:
+      example: '{"0": [255, 0, 0], "3": "#00ff00"}'
+      selector:
+        object:
+    all:
+      example: "[255, 120, 0]"
+      selector:
+        color_rgb:
+    brightness_pct:
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"

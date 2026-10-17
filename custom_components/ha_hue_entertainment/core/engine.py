@@ -22,6 +22,8 @@ log = logging.getLogger(__name__)
 
 Color = tuple[float, float, float]
 
+WARM_WHITE: Color = (1.0, 0.66, 0.34)  # roughly 2700 K
+
 WATCHDOG_INTERVAL = 2.0     # how often the watchdog looks at the stream
 BRIDGE_CHECK_INTERVAL = 10  # how often it asks the bridge if our stream is still active
 ACTIVATE_TIMEOUT = 3.0      # time for the bridge to mark the zone active after "start"
@@ -29,15 +31,24 @@ MAX_BACKOFF = 30.0
 
 
 def parse_color(value) -> Color:
-    """Accept [r, g, b] in 0..255 or '#rrggbb'. Returns floats in 0..1."""
+    """Accept [r, g, b] or [r, g, b, brightness] in 0..255, or '#rrggbb' / '#rrggbbBB'.
+
+    The optional 4th value is brightness (not alpha) and is multiplied into the
+    colour. Returns floats in 0..1.
+    """
     if isinstance(value, str):
         h = value.lstrip("#")
-        if len(h) != 6:
+        if len(h) not in (6, 8):
             raise ValueError(f"bad hex colour {value!r}")
-        return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
-    if isinstance(value, (list, tuple)) and len(value) == 3:
-        return tuple(max(0.0, min(255.0, float(v))) / 255 for v in value)
-    raise ValueError(f"bad colour {value!r}; use [r,g,b] 0-255 or '#rrggbb'")
+        try:
+            value = [int(h[i:i + 2], 16) for i in range(0, len(h), 2)]
+        except ValueError:
+            raise ValueError(f"bad hex colour {value!r}") from None
+    if isinstance(value, (list, tuple)) and len(value) in (3, 4):
+        v = [max(0.0, min(255.0, float(x))) / 255 for x in value]
+        scale = v[3] if len(v) == 4 else 1.0
+        return tuple(c * scale for c in v[:3])
+    raise ValueError(f"bad colour {value!r}; use [r,g,b], [r,g,b,brightness] (0-255), '#rrggbb' or '#rrggbbBB'")
 
 
 def to_hex(c: Color) -> str:
@@ -61,6 +72,7 @@ class HueSyncEngine:
         self.streamer: DtlsStreamer | None = None
         self.frame: Frame = {}
         self.brightness = 1.0
+        self.base_color: Color = WARM_WHITE  # whole-area colour; what a new stream starts with
         self.frame_version = 0          # bumps on every colour change
         self.command_rate = 0.0
         self._cmd_count = 0
@@ -180,7 +192,7 @@ class HueSyncEngine:
 
     async def _load_zone(self, zone_id: str):
         self.zone = await self._call(lambda b: b.zone(zone_id))
-        self.frame = {ch["id"]: (0.0, 0.0, 0.0) for ch in self.zone["channels"]}
+        self.frame = {ch["id"]: self.base_color for ch in self.zone["channels"]}
         self.frame_version += 1
 
     async def select_zone(self, zone_id: str) -> dict:
@@ -357,12 +369,17 @@ class HueSyncEngine:
     # ---- colours ---------------------------------------------------------
 
     def set_colors(self, channels: dict | None = None, all=None, brightness: float | None = None):
-        """Update the frame. Unlisted channels keep their colour."""
-        if not self.zone:
+        """Update the frame. Unlisted channels keep their colour.
+
+        `all` also becomes the base colour that the next stream starts with, so
+        it and `brightness` can be set before a zone is selected.
+        """
+        if channels and not self.zone:
             raise BridgeError("Select an entertainment zone first")
         new = dict(self.frame)
         if all is not None:
             c = parse_color(all)
+            self.base_color = c
             new = {ch: c for ch in new}
         for key, value in (channels or {}).items():
             ch = int(key)

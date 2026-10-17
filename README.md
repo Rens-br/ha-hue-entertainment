@@ -82,8 +82,10 @@ a Hue Sync Box) is streaming, start returns 409 naming the area and app.
 | PUT | `/api/v1/colors` | see below | set colours |
 | WS | `/api/v1/ws` | | high-rate frames + live state |
 
-Colours are `[r, g, b]` in 0–255 or `"#rrggbb"`. Unlisted channels keep their
-colour, and `all` is applied before `channels`:
+Colours are `[r, g, b]` in 0–255 or `"#rrggbb"`, with an optional 4th value for
+brightness (0–255, multiplied into the colour; not alpha): `[255, 0, 0, 128]` or
+`"#ff000080"`. Unlisted channels keep their colour, and `all` is applied before
+`channels`:
 
 ```json
 {"all": [0, 0, 0], "channels": {"0": [255, 0, 0], "3": "#00ff00"}, "brightness": 0.8}

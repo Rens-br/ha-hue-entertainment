@@ -32,14 +32,34 @@
     }
   },
   "entity": {
+    "light": {
+      "entertainment": {
+        "name": "Entertainment"
+      }
+    },
     "select": {
       "zone": {
         "name": "Entertainment zone"
       }
-    },
-    "switch": {
-      "sync": {
-        "name": "Sync"
+    }
+  },
+  "services": {
+    "set_colors": {
+      "name": "Set colours",
+      "description": "Set colours per channel (a light or light segment) and/or for the whole entertainment area. Starts sync if it is off. Channel ids are listed in the light's channels attribute.",
+      "fields": {
+        "channels": {
+          "name": "Channels",
+          "description": "Colour per channel id, as [r, g, b] or [r, g, b, brightness] (0-255), or \"#rrggbb\" / \"#rrggbbBB\". Channels not listed keep their colour."
+        },
+        "all": {
+          "name": "All channels",
+          "description": "Colour for every channel, applied before Channels. Also becomes the light's colour."
+        },
+        "brightness_pct": {
+          "name": "Brightness",
+          "description": "Brightness of the whole area in percent."
+        }
       }
     }
   }

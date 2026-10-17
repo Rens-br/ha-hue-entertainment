@@ -56,10 +56,9 @@ ha_hue_entertainment/          (repo ha-hue-entertainment)
 
 Per entertainment zone (one device per bridge, zones as its entities):
 
-- `switch` **Sync**: start/stop the entertainment stream for the selected zone
 - `select` **Entertainment zone**: which zone to stream to
 - `select` **Scene**: the animated scene to play (includes "None")
-- `light` **Entertainment**: on/off, brightness, colour, and the scenes as `effect`s.
+- `light` **Entertainment**: on/off starts/stops sync; brightness, colour, and the scenes as `effect`s.
   This is how Home Assistant models effect-capable lights (WLED, Hue, LIFX),
   so dashboards, voice assistants and automations work with it out of the box.
 - `number` **Brightness**, **Speed**: settings of the running scene
@@ -113,11 +112,15 @@ added later as an opt-in for compatibility with existing light-show software.
 - Re-pairing and Reconfigure moved to step 7 (parked as a git stash)
 
 ### 3. Entities and services
-- [x] Sync switch and entertainment zone select (switching zones while syncing moves the stream)
+- [x] Entertainment zone select (switching zones while syncing moves the stream)
+- [x] Light entity: on/off = sync on/off, colour and brightness for the whole area, kept across restarts
+      (replaces the separate sync switch)
 - [x] Busy reporting: starting while another app syncs fails with "busy: <area> by <app>"
 - [x] Another app taking over (Hue app, Sync Box) turns sync off instead of fighting back
-- [ ] Rest of the entity model (stream state sensor, light with effects, numbers, when-idle select)
-- [ ] Services, with descriptions and translations
+- [ ] Rest of the entity model (stream state sensor, scenes as light effects, numbers, when-idle select)
+- [x] `set_colors` service: per-channel and whole-area colours, optional per-colour brightness;
+      channel ids listed in the light's `channels` attribute
+- [ ] Other services (play_scene, stop_scene, import/export), with descriptions and translations
 - [ ] Override setting (decision 9)
 - [x] Restore the lights' pre-sync state after stopping: the bridge does this itself, nothing to build
 
