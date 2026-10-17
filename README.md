@@ -80,6 +80,9 @@ a Hue Sync Box) is streaming, start returns 409 naming the area and app.
 | POST | `/api/v1/stream/stop` | | stop sync; lights return to normal control |
 | GET | `/api/v1/colors` | | current frame |
 | PUT | `/api/v1/colors` | see below | set colours |
+| GET | `/api/v1/scenes` | | scenes and their parameters |
+| POST | `/api/v1/scene/play` | `{"scene": "sweep", "params": {…}, "speed": 1}` | play a scene (starts streaming if needed) |
+| POST | `/api/v1/scene/stop` | | stop the scene; lights keep its last frame |
 | WS | `/api/v1/ws` | | high-rate frames + live state |
 
 Colours are `[r, g, b]` in 0–255 or `"#rrggbb"`, with an optional 4th value for
@@ -90,6 +93,12 @@ brightness (0–255, multiplied into the colour; not alpha): `[255, 0, 0, 128]` 
 ```json
 {"all": [0, 0, 0], "channels": {"0": [255, 0, 0], "3": "#00ff00"}, "brightness": 0.8}
 ```
+
+Colours replace a running scene. With `"overlay": true` they are drawn on top of
+it instead, optionally for `"duration"` seconds; `"clear_overlay": true` removes
+overlays. Own scenes go in `data/scenes/*.json` (format in
+`custom_components/ha_hue_entertainment/core/scenes.py`); a scene with the same
+id as a built-in replaces it.
 
 **WebSocket** (`ws://127.0.0.1:8080/api/v1/ws`) messages:
 

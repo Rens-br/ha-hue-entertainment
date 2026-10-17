@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "id": "thunderstorm",
+  "name": "Thunderstorm",
+  "description": "Dim storm clouds with lightning that strikes somewhere and rolls across the room.",
+  "author": "ha-hue-entertainment",
+  "parameters": {
+    "rate": {"type": "number", "default": 0.1, "min": 0, "max": 0.3}
+  },
+  "layers": [
+    {"type": "noise", "colors": ["#05080f", "#101a2e", "#05080f"], "scale": 1.0, "drift": 0.03},
+    {"type": "flash", "color": "#dfe8ff", "rate": "$rate", "spread": 2.5, "decay": 0.3, "flicker": 3, "blend": "add"}
+  ]
+}

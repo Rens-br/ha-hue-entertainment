@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "aurora",
+  "name": "Aurora",
+  "description": "Slow green, teal and violet curtains drifting across the room.",
+  "author": "ha-hue-entertainment",
+  "parameters": {
+    "drift": {"type": "number", "default": 0.05, "min": 0.01, "max": 0.5}
+  },
+  "layers": [
+    {"type": "noise", "colors": ["#02140f", "#00c86e", "#00b4c8", "#5a28c8", "#02140f"], "scale": 1.2, "drift": "$drift"}
+  ]
+}

@@ -26,7 +26,8 @@ interface for their own effects.
 | 10 | Scene format | JSON to start; extend later if it falls short |
 | 11 | Entity model | Follow Home Assistant conventions (below), including a `light` entity with scenes as effects. What the lights show when sync is on but nothing sends is a user setting (hold last colours / dark / default scene) |
 | 12 | Scene settings | Adjustable entities (brightness, speed, …) |
-| 13 | Sharing | Import / export JSON files |
+| 13 | Scenes storage | Built-in scenes ship with the integration; user scenes are JSON files in `/config/ha_hue_entertainment/scenes/`, read at startup and reload. A user scene with the same id replaces the built-in. Import/export actions and URL import later |
+| 19 | Overlay | `set_colors` with `overlay: true` draws the given channels on top of a running scene (solid colour), optionally for a `duration`; without overlay, colours replace the scene |
 | 14 | Later | Restart behaviour, multiple bridges, reuse of HA's Hue integration, scene editor |
 | 7 | Builder socket | Home Assistant WebSocket API by default; UDP (DDP/E1.31) as a possible later opt-in |
 | 18 | Multiple sources | One source at a time; newest wins, the previous one is told it lost control |
@@ -135,10 +136,13 @@ added later as an opt-in for compatibility with existing light-show software.
 - [ ] Settings: frame rate, default brightness
 
 ### 5. Animated scenes (JSON)
-- [ ] Define the JSON scene format: parameters, colours, timing, position-based effects (draft below)
-- [ ] Scene engine: computes each channel's colour from its position and time at a fixed rate
-- [ ] Built-in scenes: solid, sweep left→right, rainbow, pulse, chase, sparkle, fire
-- [ ] Import / export files; validation with clear errors
+- [x] JSON scene format v1 (documented in `core/scenes.py`): parameters, play-once or loop, layers
+      solid / gradient / band / noise / flash with normal / add / max blending
+- [x] Scene engine: computes each channel's colour from its position and time for every packet
+- [x] First built-in scenes: Sweep, Aurora, Thunderstorm (tested on real lights)
+- [ ] Load user scenes from `/config/ha_hue_entertainment/scenes/`; validation with clear errors
+- [x] Overlay in the core and standalone API (decision 19); Home Assistant side follows with the scenes
+- [ ] Later: import / export actions
 
 ### 6. Builder interface
 - [ ] WebSocket commands: get zone layout, claim control, send frames, release

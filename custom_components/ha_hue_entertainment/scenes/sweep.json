@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "id": "sweep",
+  "name": "Sweep",
+  "description": "A band of colour travels across the room.",
+  "author": "ha-hue-entertainment",
+  "parameters": {
+    "color": {"type": "color", "default": "#ff7a00"},
+    "background": {"type": "color", "default": "#000000"},
+    "width": {"type": "number", "default": 0.5, "min": 0.1, "max": 2},
+    "period": {"type": "number", "default": 4, "min": 0.5, "max": 60},
+    "axis": {"type": "choice", "default": "x", "options": ["x", "y", "z"]},
+    "bounce": {"type": "choice", "default": false, "options": [false, true]}
+  },
+  "layers": [
+    {"type": "solid", "color": "$background"},
+    {"type": "band", "axis": "$axis", "color": "$color", "width": "$width", "period": "$period", "bounce": "$bounce"}
+  ]
+}

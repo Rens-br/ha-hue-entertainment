@@ -16,6 +16,7 @@ import httpx
 
 from .bridge import BridgeError, HueBridge, LinkButtonNotPressed, discover
 from .config import Settings
+from .scenes import Scene, SceneRun, parse_color
 from .stream import DtlsStreamer, Frame
 
 log = logging.getLogger(__name__)
@@ -28,27 +29,6 @@ WATCHDOG_INTERVAL = 2.0     # how often the watchdog looks at the stream
 BRIDGE_CHECK_INTERVAL = 10  # how often it asks the bridge if our stream is still active
 ACTIVATE_TIMEOUT = 3.0      # time for the bridge to mark the zone active after "start"
 MAX_BACKOFF = 30.0
-
-
-def parse_color(value) -> Color:
-    """Accept [r, g, b] or [r, g, b, brightness] in 0..255, or '#rrggbb' / '#rrggbbBB'.
-
-    The optional 4th value is brightness (not alpha) and is multiplied into the
-    colour. Returns floats in 0..1.
-    """
-    if isinstance(value, str):
-        h = value.lstrip("#")
-        if len(h) not in (6, 8):
-            raise ValueError(f"bad hex colour {value!r}")
-        try:
-            value = [int(h[i:i + 2], 16) for i in range(0, len(h), 2)]
-        except ValueError:
-            raise ValueError(f"bad hex colour {value!r}") from None
-    if isinstance(value, (list, tuple)) and len(value) in (3, 4):
-        v = [max(0.0, min(255.0, float(x))) / 255 for x in value]
-        scale = v[3] if len(v) == 4 else 1.0
-        return tuple(c * scale for c in v[:3])
-    raise ValueError(f"bad colour {value!r}; use [r,g,b], [r,g,b,brightness] (0-255), '#rrggbb' or '#rrggbbBB'")
 
 
 def to_hex(c: Color) -> str:
@@ -74,6 +54,13 @@ class HueSyncEngine:
         self.brightness = 1.0
         self.base_color: Color = WARM_WHITE  # whole-area colour; what a new stream starts with
         self.allow_override = False  # may a start by the user stop another app's stream?
+
+        self.scenes: dict[str, Scene] = {}     # available scenes by id, set by the host
+        self.scene_run: SceneRun | None = None  # the scene playing now
+        self.speed = 1.0                       # scene speed multiplier
+        self.overlays: dict[int, tuple[Color, float | None]] = {}  # ch -> (colour, expires at)
+        self._render_at: float | None = None
+        self._scene_ended = False
         self.frame_version = 0          # bumps on every colour change
         self.command_rate = 0.0
         self._cmd_count = 0
@@ -194,7 +181,15 @@ class HueSyncEngine:
     async def _load_zone(self, zone_id: str):
         self.zone = await self._call(lambda b: b.zone(zone_id))
         self.frame = {ch["id"]: self.base_color for ch in self.zone["channels"]}
+        self.overlays = {}
+        if self.scene_run:  # keep playing, laid out on the new zone's positions
+            run = self.scene_run
+            self.scene_run = SceneRun(run.scene, self._positions(), run.params)
         self.frame_version += 1
+
+    def _positions(self) -> dict[int, tuple[float, float, float]]:
+        return {ch["id"]: (ch["position"]["x"], ch["position"]["y"], ch["position"]["z"])
+                for ch in self.zone["channels"]}
 
     async def select_zone(self, zone_id: str) -> dict:
         """Select a zone. While syncing, the stream moves to the new zone in one
@@ -226,7 +221,26 @@ class HueSyncEngine:
         return bool(self.streamer and self.streamer.running)
 
     def _current_frame(self):
-        return self.frame, self.brightness
+        """Called by the stream thread for every packet."""
+        now = time.monotonic()
+        run = self.scene_run
+        if run:
+            dt = now - self._render_at if self._render_at is not None else 0.0
+            rendered = run.render(dt, self.speed)
+            if rendered is None:  # a play-once scene finished; keep its last frame
+                self.scene_run, self._scene_ended = None, True
+            else:
+                self.frame = rendered
+                self.frame_version += 1
+        self._render_at = now
+        frame = self.frame
+        if self.overlays:
+            live = {ch: o for ch, o in self.overlays.items() if o[1] is None or o[1] > now}
+            if len(live) != len(self.overlays):
+                self.overlays = live
+                self.frame_version += 1
+            frame = {**frame, **{ch: o[0] for ch, o in live.items() if ch in frame}}
+        return frame, self.brightness
 
     async def start_stream(self, fps: float = 50.0):
         """Start streaming. Errors on the first attempt go back to the caller;
@@ -337,6 +351,9 @@ class HueSyncEngine:
                     await self._connect_bridge()
                 if self.want_fps:
                     await self._check_stream()
+                if self._scene_ended:
+                    self._scene_ended = False
+                    await self._notify()
             except asyncio.CancelledError:
                 raise
             except Exception as e:  # never let the watchdog die
@@ -384,14 +401,61 @@ class HueSyncEngine:
 
     # ---- colours ---------------------------------------------------------
 
-    def set_colors(self, channels: dict | None = None, all=None, brightness: float | None = None):
+    # ---- scenes ----------------------------------------------------------
+
+    def set_scenes(self, scenes: dict[str, Scene]) -> None:
+        self.scenes = scenes
+
+    async def play_scene(self, scene_id: str, params: dict | None = None) -> None:
+        """Play a scene on the selected zone. Starting the stream is up to the caller."""
+        if not self.zone:
+            raise BridgeError("Select an entertainment zone first")
+        if scene_id not in self.scenes:
+            raise ValueError(f"unknown scene {scene_id!r}")
+        self.scene_run = SceneRun(self.scenes[scene_id], self._positions(), params)
+        self._render_at = None
+        await self._notify()
+
+    async def stop_scene(self) -> None:
+        """Stop the scene; the lights keep its last frame."""
+        if self.scene_run:
+            self.scene_run = None
+            await self._notify()
+
+    @property
+    def scene_id(self) -> str | None:
+        return self.scene_run.scene.id if self.scene_run else None
+
+    # ---- colours ---------------------------------------------------------
+
+    def set_colors(self, channels: dict | None = None, all=None, brightness: float | None = None,
+                   overlay: bool = False, duration: float | None = None, clear_overlay: bool = False):
         """Update the frame. Unlisted channels keep their colour.
 
+        Colours replace a running scene, unless `overlay` is set: then they are
+        drawn on top of it (for `duration` seconds, or until cleared).
         `all` also becomes the base colour that the next stream starts with, so
         it and `brightness` can be set before a zone is selected.
         """
-        if channels and not self.zone:
+        if (channels or overlay) and not self.zone:
             raise BridgeError("Select an entertainment zone first")
+        if clear_overlay:
+            self.overlays = {}
+        if overlay:
+            expires = time.monotonic() + duration if duration else None
+            targets = {ch: parse_color(all) for ch in self.frame} if all is not None else {}
+            for key, value in (channels or {}).items():
+                if int(key) not in self.frame:
+                    raise ValueError(f"channel {int(key)} not in zone")
+                targets[int(key)] = parse_color(value)
+            self.overlays = {**self.overlays, **{ch: (c, expires) for ch, c in targets.items()}}
+            if brightness is not None:
+                self.brightness = max(0.0, min(1.0, float(brightness)))
+            self.frame_version += 1
+            self._count_command()
+            return
+        if channels or all is not None:
+            self.scene_run = None  # explicit colours replace the scene
         new = dict(self.frame)
         if all is not None:
             c = parse_color(all)
@@ -436,6 +500,7 @@ class HueSyncEngine:
                 "packets": st.stats.packets if st else 0,
                 "error": self.last_error,
             },
+            "scene": {"id": self.scene_id, "speed": self.speed, "overlays": len(self.overlays)},
             "commands_per_sec": round(self.command_rate, 1),
         }
 

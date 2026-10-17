@@ -26,11 +26,14 @@ sys.path.insert(0, str(REPO / "custom_components" / "ha_hue_entertainment"))
 
 from core.bridge import BridgeError, LinkButtonNotPressed  # noqa: E402
 from core.engine import HueSyncEngine  # noqa: E402
+from core.scenes import load_scene_dir  # noqa: E402
 
 from .config_store import ConfigStore  # noqa: E402
 
 CONFIG_ENV = "HUE_ENTERTAINMENT_CONFIG"
 DEFAULT_CONFIG = REPO / "data" / "config.json"
+BUILTIN_SCENES = REPO / "custom_components" / "ha_hue_entertainment" / "scenes"
+USER_SCENES = REPO / "data" / "scenes"  # your own *.json scenes; same id replaces a built-in
 
 log = logging.getLogger("ha_hue_entertainment.standalone")
 
@@ -59,6 +62,15 @@ class ColorsRequest(BaseModel):
         None, description='Per-channel colours, e.g. {"0": [255, 0, 0], "3": "#00ff00"}')
     all: ColorValue | None = Field(None, description="Set every channel to this colour first")
     brightness: float | None = Field(None, ge=0, le=1, description="Global brightness multiplier")
+    overlay: bool = Field(False, description="Draw on top of a running scene instead of replacing it")
+    duration: float | None = Field(None, gt=0, description="Overlay lifetime in seconds")
+    clear_overlay: bool = Field(False, description="Remove all overlays first")
+
+
+class ScenePlay(BaseModel):
+    scene: str = Field(description="Scene id, see GET /scenes")
+    params: dict | None = Field(None, description="Scene parameters; defaults for the rest")
+    speed: float | None = Field(None, gt=0, le=10, description="Speed multiplier")
 
 
 # ---- app -----------------------------------------------------------------
@@ -66,6 +78,11 @@ class ColorsRequest(BaseModel):
 def create_app() -> FastAPI:
     store = ConfigStore(os.environ.get(CONFIG_ENV, DEFAULT_CONFIG))
     engine = HueSyncEngine(store.settings, store.save, app_name="ha_hue_entertainment#standalone")
+    scenes, _ = load_scene_dir(BUILTIN_SCENES, builtin=True)
+    user_scenes, scene_errors = load_scene_dir(USER_SCENES)
+    for err in scene_errors:
+        log.warning("Scene not loaded: %s", err)
+    engine.set_scenes({**scenes, **user_scenes})
     sockets: set["Client"] = set()
 
     async def broadcast_status():
@@ -165,8 +182,27 @@ def create_app() -> FastAPI:
 
     @api.put("/colors", summary="Set channel colours (use the WebSocket for high rates)")
     async def put_colors(req: ColorsRequest):
-        engine.set_colors(req.channels, req.all, req.brightness)
+        engine.set_colors(req.channels, req.all, req.brightness, req.overlay, req.duration, req.clear_overlay)
         return engine.colors()
+
+    @api.get("/scenes", summary="Available scenes and their parameters")
+    async def list_scenes():
+        return [{"id": s.id, "name": s.name, "description": s.description, "builtin": s.builtin,
+                 "parameters": s.parameters, "duration": s.duration} for s in engine.scenes.values()]
+
+    @api.post("/scene/play", summary="Play a scene; starts streaming if needed")
+    async def play_scene(req: ScenePlay):
+        if req.speed is not None:
+            engine.speed = req.speed
+        await engine.play_scene(req.scene, req.params)
+        if not engine.want_fps:
+            await engine.start_stream()
+        return engine.status()
+
+    @api.post("/scene/stop", summary="Stop the scene; lights keep its last frame")
+    async def stop_scene():
+        await engine.stop_scene()
+        return engine.status()
 
     @api.websocket("/ws")
     async def ws(websocket: WebSocket):
@@ -180,7 +216,8 @@ def create_app() -> FastAPI:
                 kind = msg.get("type")
                 try:
                     if kind == "colors":
-                        engine.set_colors(msg.get("channels"), msg.get("all"), msg.get("brightness"))
+                        engine.set_colors(msg.get("channels"), msg.get("all"), msg.get("brightness"),
+                                          bool(msg.get("overlay")), msg.get("duration"), bool(msg.get("clear_overlay")))
                     elif kind == "subscribe":
                         client.want_colors = bool(msg.get("colors", True))
                         client.seen_version = -1
