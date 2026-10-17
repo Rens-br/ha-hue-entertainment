@@ -21,15 +21,21 @@ def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(verify=False, timeout=8)
 
 
-async def discover(timeout: float = 3.0) -> list[dict]:
-    """Find bridges on the local network via mDNS."""
+async def discover(azc=None, timeout: float = 3.0) -> list[dict]:
+    """Find bridges on the local network via mDNS.
+
+    Pass a shared AsyncZeroconf instance (Home Assistant has one); without it a
+    temporary instance is created and closed again.
+    """
     found: dict[str, dict] = {}
 
     try:
         from zeroconf import ServiceStateChange
         from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-        azc = AsyncZeroconf()
+        own_zc = azc is None
+        if own_zc:
+            azc = AsyncZeroconf()
         names: set[str] = set()
 
         def on_change(zeroconf, service_type, name, state_change):
@@ -48,7 +54,8 @@ async def discover(timeout: float = 3.0) -> list[dict]:
                     found[bid] = {"id": bid, "host": addrs[0], "name": name.split(".")[0],
                                   "model": props.get("modelid")}
         await browser.async_cancel()
-        await azc.async_close()
+        if own_zc:
+            await azc.async_close()
     except Exception as e:
         log.warning("mDNS discovery failed: %s", e)
 
@@ -56,13 +63,16 @@ async def discover(timeout: float = 3.0) -> list[dict]:
 
 
 class HueBridge:
-    def __init__(self, host: str, app_key: str | None = None):
+    def __init__(self, host: str, app_key: str | None = None, http: httpx.AsyncClient | None = None):
+        """`http` must skip certificate verification; without it a private client is created."""
         self.host = host
         self.app_key = app_key
-        self._http = _client()
+        self._own_http = http is None
+        self._http = http or _client()
 
     async def close(self):
-        await self._http.aclose()
+        if self._own_http:
+            await self._http.aclose()
 
     @property
     def _base(self) -> str:

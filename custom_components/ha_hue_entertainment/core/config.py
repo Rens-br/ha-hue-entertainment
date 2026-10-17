@@ -1,11 +1,10 @@
-"""Persisted settings: bridge address, pairing keys and the selected zone.
+"""Settings the engine needs: bridge address, pairing keys and the selected zone.
 
-The caller decides where the file lives (the standalone server uses data/config.json).
+Where they are stored is up to the caller (a config entry in Home Assistant,
+a JSON file for the standalone server); the engine reports changes through a
+save callback.
 """
-import json
-import os
-from dataclasses import asdict, dataclass
-from pathlib import Path
+from dataclasses import dataclass
 
 
 @dataclass
@@ -19,23 +18,3 @@ class Settings:
     @property
     def paired(self) -> bool:
         return bool(self.bridge_host and self.app_key and self.client_key)
-
-
-class ConfigStore:
-    def __init__(self, path: Path | str):
-        self.path = Path(path)
-        self.settings = self._load()
-
-    def _load(self) -> Settings:
-        try:
-            data = json.loads(self.path.read_text())
-            return Settings(**{k: v for k, v in data.items() if k in Settings.__dataclass_fields__})
-        except (FileNotFoundError, json.JSONDecodeError):
-            return Settings()
-
-    def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(asdict(self.settings), indent=2))
-        os.chmod(tmp, 0o600)  # holds the bridge keys
-        tmp.replace(self.path)

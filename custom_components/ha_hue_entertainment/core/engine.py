@@ -7,13 +7,15 @@ alive. If the bridge reboots, changes IP, or another app takes the stream,
 it reconnects with backoff until `stop_stream()` is called.
 """
 import asyncio
+import inspect
 import logging
 import time
+from collections.abc import Callable
 
 import httpx
 
 from .bridge import BridgeError, HueBridge, LinkButtonNotPressed, discover
-from .config import ConfigStore
+from .config import Settings
 from .stream import DtlsStreamer, Frame
 
 log = logging.getLogger(__name__)
@@ -43,8 +45,15 @@ def to_hex(c: Color) -> str:
 
 
 class HueSyncEngine:
-    def __init__(self, store: ConfigStore):
-        self.store = store
+    def __init__(self, settings: Settings, save: Callable[[Settings], object],
+                 http: httpx.AsyncClient | None = None, zeroconf=None, app_name: str = "ha_hue_entertainment#core"):
+        """`save(settings)` persists changes (may be async). `http` and `zeroconf` let
+        the host share its clients; otherwise the core creates its own."""
+        self.settings = settings
+        self._save_cb = save
+        self._http = http
+        self._zeroconf = zeroconf
+        self._app_name = app_name
         self.bridge: HueBridge | None = None
         self.bridge_name: str | None = None
         self.zone: dict | None = None
@@ -70,9 +79,9 @@ class HueSyncEngine:
     # ---- lifecycle -------------------------------------------------------
 
     async def startup(self):
-        s = self.store.settings
+        s = self.settings
         if s.paired:
-            self.bridge = HueBridge(s.bridge_host, s.app_key)
+            self.bridge = HueBridge(s.bridge_host, s.app_key, self._http)
             await self._connect_bridge()
         self._watchdog = asyncio.create_task(self._watch())
 
@@ -89,7 +98,7 @@ class HueSyncEngine:
         try:
             info = await self._call(lambda b: b.info())
             self.bridge_name = info.get("name")
-            sel = self.store.settings.selected_zone
+            sel = self.settings.selected_zone
             if sel and not self.zone:
                 await self._load_zone(sel)
             return True
@@ -101,19 +110,19 @@ class HueSyncEngine:
     # ---- bridge / pairing ------------------------------------------------
 
     async def discover(self) -> list[dict]:
-        return await discover()
+        return await discover(self._zeroconf)
 
     async def pair(self, host: str) -> dict:
         async with self._lock:
             if self.want_fps:
                 raise BridgeError("Stop streaming before pairing")
-            bridge = HueBridge(host)
+            bridge = HueBridge(host, http=self._http)
             info = await bridge.info()
-            app_key, client_key = await bridge.pair()
-            s = self.store.settings
+            app_key, client_key = await bridge.pair(self._app_name)
+            s = self.settings
             s.bridge_host, s.bridge_id = host, info.get("bridgeid")
             s.app_key, s.client_key, s.selected_zone = app_key, client_key, None
-            self.store.save()
+            await self._save()
             if self.bridge:
                 await self.bridge.close()
             bridge.app_key = app_key
@@ -123,9 +132,9 @@ class HueSyncEngine:
 
     async def forget(self):
         await self.stop_stream()
-        s = self.store.settings
+        s = self.settings
         s.bridge_host = s.bridge_id = s.app_key = s.client_key = s.selected_zone = None
-        self.store.save()
+        await self._save()
         if self.bridge:
             await self.bridge.close()
         self.bridge = self.bridge_name = self.zone = None
@@ -144,14 +153,14 @@ class HueSyncEngine:
 
     async def _relocate_bridge(self) -> bool:
         """Find the paired bridge by its ID via mDNS; update the saved host if it moved."""
-        s = self.store.settings
+        s = self.settings
         if not s.bridge_id:
             return False
-        for b in await discover():
+        for b in await discover(self._zeroconf):
             if b["id"].upper() == s.bridge_id.upper() and b["host"] != self.bridge.host:
                 log.warning("Bridge %s moved: %s -> %s", s.bridge_id, self.bridge.host, b["host"])
                 self.bridge.host = s.bridge_host = b["host"]
-                self.store.save()
+                await self._save()
                 return True
         return False
 
@@ -177,8 +186,8 @@ class HueSyncEngine:
             if self.want_fps:
                 raise BridgeError("Stop streaming before switching zones")
             await self._load_zone(zone_id)
-            self.store.settings.selected_zone = zone_id
-            self.store.save()
+            self.settings.selected_zone = zone_id
+            await self._save()
         await self._notify()
         return self.zone
 
@@ -213,7 +222,7 @@ class HueSyncEngine:
         await self._notify()
 
     async def _open_stream(self, fps: float):
-        s, zid = self.store.settings, self.zone["id"]
+        s, zid = self.settings, self.zone["id"]
         await self._call(lambda b: b.set_streaming(zid, True))
         try:
             # The bridge accepts "start" even when another app holds the stream,
@@ -330,7 +339,7 @@ class HueSyncEngine:
     # ---- status ----------------------------------------------------------
 
     def status(self) -> dict:
-        s, st = self.store.settings, self.streamer
+        s, st = self.settings, self.streamer
         return {
             "paired": bool(self.bridge),
             "bridge": {"host": s.bridge_host, "id": s.bridge_id, "name": self.bridge_name} if self.bridge else None,
@@ -346,6 +355,11 @@ class HueSyncEngine:
             },
             "commands_per_sec": round(self.command_rate, 1),
         }
+
+    async def _save(self):
+        result = self._save_cb(self.settings)
+        if inspect.isawaitable(result):
+            await result
 
     async def _notify(self):
         if self.on_status_change:

@@ -25,8 +25,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "custom_components" / "ha_hue_entertainment"))
 
 from core.bridge import BridgeError, LinkButtonNotPressed  # noqa: E402
-from core.config import ConfigStore  # noqa: E402
 from core.engine import HueSyncEngine  # noqa: E402
+
+from .config_store import ConfigStore  # noqa: E402
 
 CONFIG_ENV = "HUE_ENTERTAINMENT_CONFIG"
 DEFAULT_CONFIG = REPO / "data" / "config.json"
@@ -63,7 +64,8 @@ class ColorsRequest(BaseModel):
 # ---- app -----------------------------------------------------------------
 
 def create_app() -> FastAPI:
-    engine = HueSyncEngine(ConfigStore(os.environ.get(CONFIG_ENV, DEFAULT_CONFIG)))
+    store = ConfigStore(os.environ.get(CONFIG_ENV, DEFAULT_CONFIG))
+    engine = HueSyncEngine(store.settings, store.save, app_name="ha_hue_entertainment#standalone")
     sockets: set["Client"] = set()
 
     async def broadcast_status():
