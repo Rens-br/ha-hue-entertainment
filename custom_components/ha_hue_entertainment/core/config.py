@@ -1,12 +1,11 @@
-"""Persisted settings: bridge address, pairing keys and the selected zone."""
+"""Persisted settings: bridge address, pairing keys and the selected zone.
+
+The caller decides where the file lives (the standalone server uses data/config.json).
+"""
 import json
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
-
-# HUE_ENTERTAINMENT_CONFIG overrides the location, e.g. /data/config.json in a Home Assistant add-on.
-CONFIG_ENV = "HUE_ENTERTAINMENT_CONFIG"
-DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "config.json"
 
 
 @dataclass
@@ -23,8 +22,8 @@ class Settings:
 
 
 class ConfigStore:
-    def __init__(self, path: Path | None = None):
-        self.path = Path(path or os.environ.get(CONFIG_ENV, DEFAULT_PATH))
+    def __init__(self, path: Path | str):
+        self.path = Path(path)
         self.settings = self._load()
 
     def _load(self) -> Settings:

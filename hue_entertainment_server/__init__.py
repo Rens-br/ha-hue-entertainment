@@ -1,1 +1,0 @@
-"""Hue Entertainment streaming server."""

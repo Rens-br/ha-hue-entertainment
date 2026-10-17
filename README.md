@@ -7,7 +7,7 @@ pushes about 25 updates per second to the lights. That is far faster than normal
 light commands, which are limited to about 10 per second per bridge.
 
 ```
-integration ──HTTP/WebSocket──▶ hue_entertainment_server ──DTLS/UDP 2100──▶ Hue bridge ──▶ lights
+integration ──HTTP/WebSocket──▶ standalone server ──DTLS/UDP 2100──▶ Hue bridge ──▶ lights
                                     (port 8080)
 ```
 
@@ -98,7 +98,7 @@ Error codes: 400 bad input, 409 bridge/state problem, 428 press the link button.
 
 ## Files
 
-- `hue_entertainment_server/bridge.py`: discovery, pairing, CLIP v2 REST
-- `hue_entertainment_server/stream.py`: HueStream v2 packets, DTLS-PSK (pyOpenSSL) sender thread
-- `hue_entertainment_server/engine.py`: state, zone and stream lifecycle, watchdog, colour buffer
-- `hue_entertainment_server/server.py`: FastAPI HTTP and WebSocket layer
+- `custom_components/ha_hue_entertainment/core/`: bridge (discovery, pairing, CLIP v2 REST),
+  stream (HueStream v2, DTLS-PSK via pyOpenSSL), engine (state, lifecycle, watchdog, colour buffer).
+  No Home Assistant imports, shared by the integration and the standalone server.
+- `standalone/server.py`: FastAPI HTTP and WebSocket layer for use outside Home Assistant

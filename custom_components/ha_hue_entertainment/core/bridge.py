@@ -74,7 +74,7 @@ class HueBridge:
         r.raise_for_status()
         return r.json()
 
-    async def pair(self, app_name: str = "hue_entertainment_server#server") -> tuple[str, str]:
+    async def pair(self, app_name: str = "ha_hue_entertainment#core") -> tuple[str, str]:
         """Create an app key + streaming client key. Needs the link button pressed."""
         r = await self._http.post(f"{self._base}/api", json={"devicetype": app_name, "generateclientkey": True})
         r.raise_for_status()
