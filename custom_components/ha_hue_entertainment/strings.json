@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose a Hue bridge",
+        "description": "Pick the bridge that controls your entertainment area.",
+        "data": {
+          "host": "Bridge"
+        }
+      },
+      "manual": {
+        "title": "Enter the bridge address",
+        "description": "The IP address or hostname of your Hue bridge. You can find it in the Hue app under Settings → My Hue system → Bridge.",
+        "data": {
+          "host": "Host"
+        }
+      },
+      "link": {
+        "title": "Press the link button",
+        "description": "Press the round link button on top of **{name}** ({host}), then select **Submit** within 30 seconds."
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the bridge. Check the address and that it is on the same network.",
+      "link_button_not_pressed": "The link button was not pressed. Press it and try again within 30 seconds."
+    },
+    "abort": {
+      "already_configured": "This bridge is already set up.",
+      "cannot_connect": "Could not reach the bridge."
+    }
+  }
+}

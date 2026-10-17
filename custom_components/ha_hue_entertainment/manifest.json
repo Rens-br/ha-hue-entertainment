@@ -1,8 +1,13 @@
 {
   "domain": "ha_hue_entertainment",
   "name": "Hue Entertainment",
-  "codeowners": ["@Rens-br"],
-  "config_flow": false,
+  "codeowners": [
+    "@Rens-br"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "zeroconf"
+  ],
   "documentation": "https://github.com/Rens-br/ha-hue-entertainment",
   "integration_type": "hub",
   "iot_class": "local_polling",
