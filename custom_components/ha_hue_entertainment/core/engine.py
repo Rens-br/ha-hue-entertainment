@@ -56,6 +56,7 @@ class HueSyncEngine:
         self._app_name = app_name
         self.bridge: HueBridge | None = None
         self.bridge_name: str | None = None
+        self.bridge_info: dict = {}     # /api/config: name, modelid, swversion, …
         self.zone: dict | None = None
         self.streamer: DtlsStreamer | None = None
         self.frame: Frame = {}
@@ -97,6 +98,7 @@ class HueSyncEngine:
         """Load bridge name and saved zone. Safe to call repeatedly."""
         try:
             info = await self._call(lambda b: b.info())
+            self.bridge_info = info
             self.bridge_name = info.get("name")
             sel = self.settings.selected_zone
             if sel and not self.zone:
