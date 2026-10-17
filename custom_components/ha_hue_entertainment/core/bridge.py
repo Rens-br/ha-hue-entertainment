@@ -15,6 +15,10 @@ class LinkButtonNotPressed(BridgeError):
     pass
 
 
+class AuthError(BridgeError):
+    """The bridge rejected our app key (reset bridge, or the app was removed)."""
+
+
 def _client() -> httpx.AsyncClient:
     # Bridges use a per-bridge certificate signed by Signify's private CA; on the
     # local network we skip verification like most Hue clients do.
@@ -102,7 +106,12 @@ class HueBridge:
             method, f"{self._base}/clip/v2/resource/{resource}",
             headers={"hue-application-key": self.app_key}, json=json,
         )
-        body = r.json() if r.content else {}
+        if r.status_code in (401, 403):  # the bridge answers with an HTML page here
+            raise AuthError("The bridge rejected the app key; pair again")
+        try:
+            body = r.json() if r.content else {}
+        except ValueError:
+            raise BridgeError(f"{method} {resource}: {r.status_code} unexpected response")
         if r.status_code >= 400 or body.get("errors"):
             msgs = "; ".join(e.get("description", "") for e in body.get("errors", [])) or r.text
             raise BridgeError(f"{method} {resource}: {r.status_code} {msgs}")
