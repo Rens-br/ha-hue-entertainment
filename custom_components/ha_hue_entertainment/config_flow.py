@@ -16,6 +16,7 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
 )
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import APP_NAME, CONF_APP_KEY, CONF_BRIDGE_ID, CONF_CLIENT_KEY, DOMAIN
 from .core.bridge import BridgeError, HueBridge, LinkButtonNotPressed, discover
@@ -57,6 +58,24 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({vol.Required(CONF_HOST): SelectSelector(SelectSelectorConfig(options=options))}),
         )
+
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
+        """A bridge announced itself on the network.
+
+        Known bridges get their address updated (this is how IP changes are
+        picked up); new ones show up as a "Discovered" card.
+        """
+        bridge_id = discovery_info.properties.get("bridgeid")
+        if not bridge_id:
+            return self.async_abort(reason="not_hue_bridge")
+        host = str(discovery_info.ip_address)
+        await self.async_set_unique_id(bridge_id.upper())
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        self._host = host
+        self._name = discovery_info.name.split(".")[0]
+        self.context["title_placeholders"] = {"name": self._name}
+        return await self.async_step_link()
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Enter the bridge address by hand."""

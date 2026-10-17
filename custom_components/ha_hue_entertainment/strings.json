@@ -1,5 +1,6 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Choose a Hue bridge",
@@ -26,7 +27,8 @@
     },
     "abort": {
       "already_configured": "This bridge is already set up.",
-      "cannot_connect": "Could not reach the bridge."
+      "cannot_connect": "Could not reach the bridge.",
+      "not_hue_bridge": "This device is not a Hue bridge."
     }
   }
 }
