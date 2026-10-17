@@ -1,0 +1,7 @@
+fastapi==0.143.3
+uvicorn==0.54.0
+websockets==17.2
+httpx==0.28.1
+zeroconf==0.151.5
+pyOpenSSL==26.4.0  # DTLS; PSK callback uses its cffi bindings, keep pinned
+cryptography==50.0.2
