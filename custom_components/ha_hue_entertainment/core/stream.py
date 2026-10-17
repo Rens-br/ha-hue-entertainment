@@ -25,6 +25,10 @@ DTLS1_2_VERSION = 0xFEFD
 CIPHER = b"PSK-AES128-GCM-SHA256"
 HANDSHAKE_TIMEOUT = 10
 
+class StreamClosed(ConnectionError):
+    """The bridge ended our session on purpose (another app took over, or the area was stopped)."""
+
+
 # Colours are (r, g, b) floats in 0..1, keyed by channel id.
 Frame = dict[int, tuple[float, float, float]]
 
@@ -74,6 +78,7 @@ class DtlsStreamer:
         self.get_frame = get_frame  # -> (Frame, brightness)
         self.stats = StreamStats()
         self.error: str | None = None
+        self.closed_by_bridge = False  # True when the bridge ended the session deliberately
         self._identity = app_key.encode()
         self._psk = bytes.fromhex(client_key)
         self._stop = threading.Event()
@@ -153,15 +158,15 @@ class DtlsStreamer:
                 return
 
     def _check_incoming(self):
-        """Raise if the bridge closed the session (alert or close_notify)."""
+        """Raise StreamClosed if the bridge ended the session (close_notify or an alert)."""
         while select.select([self._sock], [], [], 0)[0]:
             self._conn.bio_write(self._sock.recv(4096))
             try:
                 self._conn.recv(4096)
             except SSL.WantReadError:
                 pass
-            except SSL.ZeroReturnError:
-                raise ConnectionError("bridge closed the stream")
+            except (SSL.ZeroReturnError, SSL.Error) as e:
+                raise StreamClosed("the bridge ended the stream") from e
 
     def _send(self, packet: bytes):
         self._conn.send(packet)
@@ -189,6 +194,11 @@ class DtlsStreamer:
                 self._check_incoming()
                 self._send(build_packet(self.zone_id, seq, frame, brightness))
                 self.stats.tick()
+            except StreamClosed as e:
+                self.closed_by_bridge = True
+                self.error = str(e)
+                log.info(self.error)
+                break
             except Exception as e:
                 self.error = f"stream lost: {e}"
                 log.error(self.error)

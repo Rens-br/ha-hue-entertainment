@@ -30,5 +30,17 @@
       "cannot_connect": "Could not reach the bridge.",
       "not_hue_bridge": "This device is not a Hue bridge."
     }
+  },
+  "entity": {
+    "select": {
+      "zone": {
+        "name": "Entertainment zone"
+      }
+    },
+    "switch": {
+      "sync": {
+        "name": "Sync"
+      }
+    }
   }
 }

@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
         for c in list(sockets):
             await c.send(msg)
 
-    engine.on_status_change = broadcast_status
+    engine.add_listener(broadcast_status)
 
     async def pusher():
         """Status every second; colours at COLOR_PUSH_HZ to subscribers when changed."""

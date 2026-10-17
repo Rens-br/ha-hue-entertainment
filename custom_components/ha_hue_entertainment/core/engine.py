@@ -75,7 +75,7 @@ class HueSyncEngine:
 
         self._lock = asyncio.Lock()
         self._watchdog: asyncio.Task | None = None
-        self.on_status_change = None    # async callback set by the server
+        self._listeners: list[Callable[[], object]] = []
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -184,12 +184,25 @@ class HueSyncEngine:
         self.frame_version += 1
 
     async def select_zone(self, zone_id: str) -> dict:
+        """Select a zone. While syncing, the stream moves to the new zone in one
+        step: sync stays wanted, and only turns off if the new zone can't start."""
         async with self._lock:
-            if self.want_fps:
-                raise BridgeError("Stop streaming before switching zones")
+            if self.zone and self.zone["id"] == zone_id:
+                return self.zone
+            fps = self.want_fps
+            if fps:
+                await self._close_stream()  # stops the old area on the bridge
             await self._load_zone(zone_id)
             self.settings.selected_zone = zone_id
             await self._save()
+            if fps:
+                try:
+                    await self._open_stream(fps)
+                except BaseException as e:
+                    self.want_fps = None
+                    self.stream_state, self.last_error = "off", str(e)
+                    await self._notify()
+                    raise
         await self._notify()
         return self.zone
 
@@ -223,21 +236,33 @@ class HueSyncEngine:
             self.stream_state, self.last_error = "off", None
         await self._notify()
 
+    async def _busy_error(self) -> BridgeError | None:
+        """A bridge runs one stream at a time; any active area while we aren't
+        streaming means another app (e.g. a Hue Sync Box) holds it."""
+        holder = await self._call(lambda b: b.stream_holder())
+        if holder:
+            return BridgeError(f"Bridge is busy: {holder} is syncing. "
+                               "Only one entertainment stream can run at a time.")
+        return None
+
     async def _open_stream(self, fps: float):
         s, zid = self.settings, self.zone["id"]
+        # Check first: starting or stopping an area another app streams to
+        # would interfere with that app.
+        if err := await self._busy_error():
+            raise err
         await self._call(lambda b: b.set_streaming(zid, True))
         try:
-            # The bridge accepts "start" even when another app holds the stream,
-            # but then never activates the zone and ignores our handshake.
             deadline = time.monotonic() + ACTIVATE_TIMEOUT
             while await self._call(lambda b: b.zone_status(zid)) != "active":
                 if time.monotonic() > deadline:
-                    holder = await self._call(lambda b: b.stream_holder())
-                    raise BridgeError(f"Bridge is busy: {holder or 'another app'} is streaming. "
-                                      "Only one entertainment stream can run at a time.")
+                    raise await self._busy_error() or BridgeError("The bridge did not activate the entertainment area")
                 await asyncio.sleep(0.25)
             streamer = DtlsStreamer(s.bridge_host, s.app_key, s.client_key, zid, self._current_frame, fps)
-            await asyncio.to_thread(streamer.start)
+            try:
+                await asyncio.to_thread(streamer.start)
+            except (OSError, TimeoutError) as e:
+                raise BridgeError(f"Could not open the stream: {e}") from e
         except BaseException:
             await self._safe_bridge_stop(zid)
             raise
@@ -245,6 +270,22 @@ class HueSyncEngine:
         self.stream_state, self.last_error = "streaming", None
         self._backoff = WATCHDOG_INTERVAL
         self._last_bridge_check = time.monotonic()
+
+    async def _accept_takeover(self):
+        """Another app or the Hue app stopped our stream: turn sync off instead of
+        fighting back, and don't send "stop" (that could stop the other app)."""
+        if self.streamer:
+            await asyncio.to_thread(self.streamer.stop)
+            self.streamer = None
+        try:
+            holder = await self._call(lambda b: b.stream_holder())
+        except BridgeError:
+            holder = None
+        self.want_fps = None
+        self.stream_state = "off"
+        self.last_error = f"Stopped: {holder} took over" if holder else "Stopped by another app or the bridge"
+        log.info("Sync ended by the bridge (%s); not reconnecting", self.last_error)
+        await self._notify()
 
     async def _close_stream(self):
         if self.streamer:
@@ -278,16 +319,23 @@ class HueSyncEngine:
             if not self.want_fps:
                 return
             now = time.monotonic()
-            lost = None
+            lost = None    # failure: reconnect
+            ended = False  # ended on purpose (another app, the Hue app): accept it
             if not self.streaming:
-                lost = (self.streamer and self.streamer.error) or "stream not running"
+                if self.streamer and self.streamer.closed_by_bridge:
+                    ended = True
+                else:
+                    lost = (self.streamer and self.streamer.error) or "stream not running"
             elif now - self._last_bridge_check >= BRIDGE_CHECK_INTERVAL:
                 self._last_bridge_check = now
                 try:
                     if await self._call(lambda b: b.zone_status(self.zone["id"])) != "active":
-                        lost = "bridge no longer has our stream active"
+                        ended = True
                 except BridgeError as e:
                     lost = str(e)
+            if ended and self.stream_state == "streaming":
+                await self._accept_takeover()
+                return
             if lost and self.stream_state == "streaming":
                 log.warning("Stream lost (%s); reconnecting", lost)
                 await self._close_stream()
@@ -363,9 +411,16 @@ class HueSyncEngine:
         if inspect.isawaitable(result):
             await result
 
+    def add_listener(self, callback: Callable[[], object]) -> Callable[[], None]:
+        """Call `callback()` (sync or async) on every status change. Returns a remove function."""
+        self._listeners.append(callback)
+        return lambda: self._listeners.remove(callback)
+
     async def _notify(self):
-        if self.on_status_change:
-            await self.on_status_change()
+        for callback in list(self._listeners):
+            result = callback()
+            if inspect.isawaitable(result):
+                await result
 
 
 __all__ = ["HueSyncEngine", "BridgeError", "LinkButtonNotPressed", "parse_color"]

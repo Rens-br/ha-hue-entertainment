@@ -22,7 +22,7 @@ interface for their own effects.
 | 5 | Domain / licence | `ha_hue_entertainment`, MIT |
 | 6 | Bridges | One bridge for now; keep code ready for several (bridge-keyed state, no globals) |
 | 8 | HA Hue integration | Pair separately; reuse of its connection is a later item |
-| 9 | Override | Setting: may the integration stop another app's sync (e.g. Hue Sync Box)? Off → report busy. After our sync stops, restore only the lights' previous state; a stopped Sync Box session is not resumed |
+| 9 | Override | Setting: may the integration stop another app's sync (e.g. Hue Sync Box)? Off → report busy. After our sync stops, restore only the lights' previous state; a stopped Sync Box session is not resumed. When another app takes over from us, we accept it and turn sync off (no reconnect); reconnecting is only for failures such as an unreachable bridge |
 | 10 | Scene format | JSON to start; extend later if it falls short |
 | 11 | Entity model | Follow Home Assistant conventions (below), including a `light` entity with scenes as effects. What the lights show when sync is on but nothing sends is a user setting (hold last colours / dark / default scene) |
 | 12 | Scene settings | Adjustable entities (brightness, speed, …) |
@@ -105,15 +105,20 @@ added later as an opt-in for compatibility with existing light-show software.
 - [ ] Release workflow (with the first release)
 
 ### 2. Bridge setup (config flow)
-- [ ] Auto-discover bridges via Home Assistant's zeroconf (`_hue._tcp`), manual IP fallback
-- [ ] "Press the link button" step creating the app key and streaming key
-- [ ] Re-pair and remove; re-discovery by bridge ID when the IP changes (already built)
-- [ ] State keyed by bridge ID, so several bridges can be added later
+- [x] Auto-discover bridges via Home Assistant's zeroconf (`_hue._tcp`), manual IP fallback
+- [x] "Press the link button" step creating the app key and streaming key
+- [x] IP changes followed via zeroconf and re-discovery by bridge ID; remove = Home Assistant's delete
+- [x] State keyed by bridge ID, so several bridges can be added later
+- [x] Connect on load, bridge registered as a device, retry when unreachable
+- Re-pairing and Reconfigure moved to step 7 (parked as a git stash)
 
 ### 3. Entities and services
-- [ ] Entity model from QD
+- [x] Sync switch and entertainment zone select (switching zones while syncing moves the stream)
+- [x] Busy reporting: starting while another app syncs fails with "busy: <area> by <app>"
+- [x] Another app taking over (Hue app, Sync Box) turns sync off instead of fighting back
+- [ ] Rest of the entity model (stream state sensor, light with effects, numbers, when-idle select)
 - [ ] Services, with descriptions and translations
-- [ ] Override setting and busy reporting (decision 9)
+- [ ] Override setting (decision 9)
 - [x] Restore the lights' pre-sync state after stopping: the bridge does this itself, nothing to build
 
 ### 4. Sidebar panel (admins only, Lit)
@@ -137,6 +142,9 @@ added later as an opt-in for compatibility with existing light-show software.
 
 ### 7. Hardening and release
 - [ ] Watchdog/recovery (already built), diagnostics download, repair issues in HA
+- [ ] Re-pairing when the bridge rejects the key (reauth) and Reconfigure to change the IP by hand
+      (written and parked in `git stash`: "block 6: reauth and reconfigure flows (parked)")
+- [ ] First add of a bridge once hung in setup until a restart (2026-10-17); not reproducible since, keep an eye on it
 - [ ] Tests: packet building, colours, scene engine, config flow
 - [ ] README with screenshots; first release as HACS custom repository
 
