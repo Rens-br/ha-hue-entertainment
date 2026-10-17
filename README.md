@@ -1,20 +1,31 @@
-# Hue Entertainment Server
+# Hue Entertainment for Home Assistant
 
-A local server that drives a Philips Hue **entertainment zone** over the Hue
-Entertainment API (DTLS stream to the bridge), instead of sending ordinary
-per-light commands. Colour updates are sent ~50 times a second, and the bridge
-pushes about 25 updates per second to the lights. That is far faster than normal
-light commands, which are limited to about 10 per second per bridge.
+Stream colours and position-based animations to a Philips Hue **entertainment
+area** through the Hue Entertainment API (a DTLS stream to the bridge), instead
+of ordinary per-light commands. Colour updates are sent ~50 times a second and
+the bridge pushes about 25 updates per second to the lights, far faster than
+normal light commands (about 10 per second per bridge).
+
+> **Status: early development.** The Home Assistant integration is a skeleton;
+> the standalone server below works. See [docs/PLAN.md](docs/PLAN.md).
+
+## Install in Home Assistant (HACS custom repository)
+
+1. HACS → ⋮ → Custom repositories → add this repository's URL, category **Integration**.
+2. Install **Hue Entertainment** and restart Home Assistant.
+
+Setup (bridge pairing, zones, sync, scenes) is not available yet.
+
+## Standalone server
+
+Runs outside Home Assistant and exposes an HTTP/WebSocket API on localhost.
 
 ```
 integration ──HTTP/WebSocket──▶ standalone server ──DTLS/UDP 2100──▶ Hue bridge ──▶ lights
-                                    (port 8080)
+                                  (port 8080)
 ```
 
-This repository contains only the server. Integrations talk to it through the
-HTTP/WebSocket API below.
-
-## Setup
+### Setup
 
 Python 3.13 (see `.python-version`). DTLS uses OpenSSL through `pyOpenSSL`/`cryptography`,
 which have prebuilt wheels for x86_64 and aarch64 (including Alpine).
@@ -23,7 +34,7 @@ which have prebuilt wheels for x86_64 and aarch64 (including Alpine).
 uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt  # uv reads .python-version
 ```
 
-## Run
+### Run
 
 ```bash
 ./run_server.sh            # API on http://127.0.0.1:8080, docs at /docs
@@ -44,7 +55,7 @@ from the Hue app, Home Assistant or scenes is paused until you stop it.
 A bridge runs one entertainment stream at a time. If another app (for example
 a Hue Sync Box) is streaming, start returns 409 naming the area and app.
 
-## Reliability
+### Reliability
 
 - **Bridge moved:** if the saved IP stops answering, the server finds the bridge
   again by its ID via mDNS and saves the new address.
@@ -54,7 +65,7 @@ a Hue Sync Box) is streaming, start returns 409 naming the area and app.
   is `off`, `streaming` or `reconnecting`, with the last error.
 - **Logs** go to stdout.
 
-## API
+### API
 
 | Method | Path | Body | Purpose |
 |---|---|---|---|
@@ -102,3 +113,7 @@ Error codes: 400 bad input, 409 bridge/state problem, 428 press the link button.
   stream (HueStream v2, DTLS-PSK via pyOpenSSL), engine (state, lifecycle, watchdog, colour buffer).
   No Home Assistant imports, shared by the integration and the standalone server.
 - `standalone/server.py`: FastAPI HTTP and WebSocket layer for use outside Home Assistant
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).
