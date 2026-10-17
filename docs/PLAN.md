@@ -117,11 +117,13 @@ added later as an opt-in for compatibility with existing light-show software.
       (replaces the separate sync switch)
 - [x] Busy reporting: starting while another app syncs fails with "busy: <area> by <app>"
 - [x] Another app taking over (Hue app, Sync Box) turns sync off instead of fighting back
-- [ ] Rest of the entity model (stream state sensor, scenes as light effects, numbers, when-idle select)
+- [ ] Rest of the entity model (scenes as light effects, numbers, when-idle select)
+- [ ] Stream state sensor (off / streaming / reconnecting, holder, last error), moved back on request
 - [x] `set_colors` service: per-channel and whole-area colours, optional per-colour brightness;
       channel ids listed in the light's `channels` attribute
 - [ ] Other services (play_scene, stop_scene, import/export), with descriptions and translations
-- [ ] Override setting (decision 9)
+- [x] Allow override setting (decision 9): a configuration switch; when on, starting sync or switching
+      zones stops another app's stream first. Automatic reconnects never override
 - [x] Restore the lights' pre-sync state after stopping: the bridge does this itself, nothing to build
 
 ### 4. Sidebar panel (admins only, Lit)

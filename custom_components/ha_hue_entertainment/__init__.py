@@ -9,13 +9,21 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.httpx_client import get_async_client
 
-from .const import APP_NAME, CONF_APP_KEY, CONF_BRIDGE_ID, CONF_CLIENT_KEY, CONF_SELECTED_ZONE, DOMAIN
+from .const import (
+    APP_NAME,
+    CONF_ALLOW_OVERRIDE,
+    CONF_APP_KEY,
+    CONF_BRIDGE_ID,
+    CONF_CLIENT_KEY,
+    CONF_SELECTED_ZONE,
+    DOMAIN,
+)
 from .core.config import Settings
 from .core.engine import HueSyncEngine
 
 type HueEntertainmentConfigEntry = ConfigEntry[HueSyncEngine]
 
-PLATFORMS = [Platform.LIGHT, Platform.SELECT]
+PLATFORMS = [Platform.LIGHT, Platform.SELECT, Platform.SWITCH]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:
@@ -41,6 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEn
         zeroconf=await zeroconf.async_get_async_instance(hass),
         app_name=APP_NAME,
     )
+    engine.allow_override = entry.options.get(CONF_ALLOW_OVERRIDE, False)
     await engine.startup()
     if not engine.bridge_name:
         await engine.shutdown()

@@ -41,6 +41,11 @@
       "zone": {
         "name": "Entertainment zone"
       }
+    },
+    "switch": {
+      "allow_override": {
+        "name": "Allow override"
+      }
     }
   },
   "services": {

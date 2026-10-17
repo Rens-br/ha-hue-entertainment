@@ -157,20 +157,27 @@ class HueBridge:
         configs = await self._request("GET", f"entertainment_configuration/{zone_id}")
         return configs[0].get("status", "inactive") if configs else "inactive"
 
-    async def stream_holder(self) -> str | None:
-        """Describe who is streaming right now, e.g. "'TV' by HueSyncBox", or None."""
+    async def active_streams(self) -> list[dict]:
+        """Areas being streamed right now: [{"id", "name", "app"}]."""
         active = [c for c in await self.entertainment_configurations() if c.get("status") == "active"]
         if not active:
-            return None
-        cfg = active[0]
-        app = "another app"
-        owner = (cfg.get("active_streamer") or {}).get("rid")
+            return []
+        apps = {}
         try:  # app names are only exposed by the v1 whitelist
             r = await self._http.get(f"{self._base}/api/{self.app_key}/config")
-            app = r.json().get("whitelist", {}).get(owner, {}).get("name", app).split("#")[0]
+            apps = r.json().get("whitelist", {})
         except Exception:
             pass
-        return f"'{cfg['metadata']['name']}' by {app}"
+        return [{
+            "id": c["id"],
+            "name": c["metadata"]["name"],
+            "app": apps.get((c.get("active_streamer") or {}).get("rid"), {}).get("name", "another app").split("#")[0],
+        } for c in active]
+
+    async def stream_holder(self) -> str | None:
+        """Describe who is streaming right now, e.g. "'TV' by HueSyncBox", or None."""
+        active = await self.active_streams()
+        return f"'{active[0]['name']}' by {active[0]['app']}" if active else None
 
 
 def _multi_segment(cfg: dict, member: dict) -> bool:

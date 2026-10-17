@@ -73,6 +73,7 @@ class HueSyncEngine:
         self.frame: Frame = {}
         self.brightness = 1.0
         self.base_color: Color = WARM_WHITE  # whole-area colour; what a new stream starts with
+        self.allow_override = False  # may a start by the user stop another app's stream?
         self.frame_version = 0          # bumps on every colour change
         self.command_rate = 0.0
         self._cmd_count = 0
@@ -209,7 +210,7 @@ class HueSyncEngine:
             await self._save()
             if fps:
                 try:
-                    await self._open_stream(fps)
+                    await self._open_stream(fps, override=True)
                 except BaseException as e:
                     self.want_fps = None
                     self.stream_state, self.last_error = "off", str(e)
@@ -237,7 +238,7 @@ class HueSyncEngine:
                 return
             if not self.zone:
                 raise BridgeError("Select an entertainment zone first")
-            await self._open_stream(fps)
+            await self._open_stream(fps, override=True)
             self.want_fps = fps
         await self._notify()
 
@@ -257,12 +258,27 @@ class HueSyncEngine:
                                "Only one entertainment stream can run at a time.")
         return None
 
-    async def _open_stream(self, fps: float):
+    async def _take_over(self):
+        """Stop whatever other app is streaming, then wait until the bridge is free."""
+        for other in await self._call(lambda b: b.active_streams()):
+            log.info("Override: stopping %s's stream on '%s'", other["app"], other["name"])
+            await self._call(lambda b, zid=other["id"]: b.set_streaming(zid, False))
+        deadline = time.monotonic() + ACTIVATE_TIMEOUT
+        while await self._call(lambda b: b.active_streams()):
+            if time.monotonic() > deadline:
+                raise await self._busy_error() or BridgeError("Could not take over the bridge")
+            await asyncio.sleep(0.25)
+
+    async def _open_stream(self, fps: float, override: bool = False):
+        """Start our stream. `override` (user-initiated starts only) stops another
+        app's stream first when allow_override is on; otherwise a busy bridge is an error."""
         s, zid = self.settings, self.zone["id"]
         # Check first: starting or stopping an area another app streams to
         # would interfere with that app.
         if err := await self._busy_error():
-            raise err
+            if not (override and self.allow_override):
+                raise err
+            await self._take_over()
         await self._call(lambda b: b.set_streaming(zid, True))
         try:
             deadline = time.monotonic() + ACTIVATE_TIMEOUT
