@@ -103,7 +103,6 @@ added later as an opt-in for compatibility with existing light-show software.
 - [x] Move core code into `custom_components/ha_hue_entertainment/core/`; standalone server on top
 - [x] `hacs.json`, manifest, hassfest + HACS validation GitHub Actions
 - [ ] Release workflow (with the first release)
-- [ ] Replace the `OWNER` placeholder in manifest URLs and fill `codeowners` once the GitHub repo exists
 
 ### 2. Bridge setup (config flow)
 - [ ] Auto-discover bridges via Home Assistant's zeroconf (`_hue._tcp`), manual IP fallback
