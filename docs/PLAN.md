@@ -99,9 +99,11 @@ added later as an opt-in for compatibility with existing light-show software.
       (decision 8), to avoid duplicates and check reuse options
 
 ### 1. Repository and packaging
-- [ ] Rename the current repo to `ha-hue-entertainment`, MIT licence
-- [ ] Move core code into `custom_components/ha_hue_entertainment/core/`; standalone server on top
-- [ ] `hacs.json`, manifest, hassfest + HACS validation GitHub Actions, release workflow
+- [x] Rename the current repo to `ha-hue-entertainment`, MIT licence
+- [x] Move core code into `custom_components/ha_hue_entertainment/core/`; standalone server on top
+- [x] `hacs.json`, manifest, hassfest + HACS validation GitHub Actions
+- [ ] Release workflow (with the first release)
+- [ ] Replace the `OWNER` placeholder in manifest URLs and fill `codeowners` once the GitHub repo exists
 
 ### 2. Bridge setup (config flow)
 - [ ] Auto-discover bridges via Home Assistant's zeroconf (`_hue._tcp`), manual IP fallback
