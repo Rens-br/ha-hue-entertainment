@@ -162,15 +162,23 @@ returns the same status once, with the zone layout in `zone_layout`.
 import asyncio, json, math, os
 import websockets  # pip install websockets
 
+
 async def main():
     url = os.environ.get("HA_URL", "http://homeassistant.local:8123")
-    async with websockets.connect(url.replace("http", "ws", 1) + "/api/websocket") as ws:
+    async with websockets.connect(
+        url.replace("http", "ws", 1) + "/api/websocket"
+    ) as ws:
         await ws.recv()  # auth_required
-        await ws.send(json.dumps({"type": "auth", "access_token": os.environ["HA_TOKEN"]}))
+        await ws.send(
+            json.dumps({"type": "auth", "access_token": os.environ["HA_TOKEN"]})
+        )
         assert json.loads(await ws.recv())["type"] == "auth_ok"
 
-        await ws.send(json.dumps({"id": 1, "type": "ha_hue_entertainment/live/claim",
-                                  "name": "Example"}))
+        await ws.send(
+            json.dumps(
+                {"id": 1, "type": "ha_hue_entertainment/live/claim", "name": "Example"}
+            )
+        )
         claimed, lost = asyncio.Event(), asyncio.Event()
         state = {}
 
@@ -183,8 +191,9 @@ async def main():
                     continue
                 event = msg["event"]
                 if event["type"] == "claimed":
-                    state.update(client_id=event["client_id"],
-                                 channels=event["zone"]["channels"])
+                    state.update(
+                        client_id=event["client_id"], channels=event["zone"]["channels"]
+                    )
                     claimed.set()
                 elif event["type"] == "control_lost":
                     print("Control lost:", event["reason"])
@@ -197,13 +206,26 @@ async def main():
                 break
             t = n / 25
             frame = {
-                str(ch["id"]): [round(127 + 127 * math.sin(t + ch["placed"]["x"] * 3)), 40, 200]
+                str(ch["id"]): [
+                    round(127 + 127 * math.sin(t + ch["placed"]["x"] * 3)),
+                    40,
+                    200,
+                ]
                 for ch in state["channels"]
             }
-            await ws.send(json.dumps({"id": n, "type": "ha_hue_entertainment/live/frame",
-                                      "client_id": state["client_id"], "channels": frame}))
+            await ws.send(
+                json.dumps(
+                    {
+                        "id": n,
+                        "type": "ha_hue_entertainment/live/frame",
+                        "client_id": state["client_id"],
+                        "channels": frame,
+                    }
+                )
+            )
             await asyncio.sleep(1 / 25)
         task.cancel()  # leaving the "with" disconnects, which releases control
+
 
 asyncio.run(main())
 ```
