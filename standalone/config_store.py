@@ -1,7 +1,8 @@
 """JSON file storage for the standalone server's settings."""
+
+from dataclasses import asdict
 import json
 import os
-from dataclasses import asdict
 from pathlib import Path
 
 from core.config import Settings
@@ -15,7 +16,9 @@ class ConfigStore:
     def _load(self) -> Settings:
         try:
             data = json.loads(self.path.read_text())
-            return Settings(**{k: v for k, v in data.items() if k in Settings.__dataclass_fields__})
+            return Settings(
+                **{k: v for k, v in data.items() if k in Settings.__dataclass_fields__}
+            )
         except (FileNotFoundError, json.JSONDecodeError):
             return Settings()
 

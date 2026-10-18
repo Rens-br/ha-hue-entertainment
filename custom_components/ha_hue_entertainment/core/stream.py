@@ -7,6 +7,7 @@ forwards ~25 updates/s to the lights over Zigbee and drops the stream after
 pyOpenSSL has no public API for a PSK client callback, so we register one
 through its cffi bindings (OpenSSL._util). Keep pyOpenSSL pinned.
 """
+
 import logging
 import select
 import socket
@@ -25,6 +26,7 @@ DTLS1_2_VERSION = 0xFEFD
 CIPHER = b"PSK-AES128-GCM-SHA256"
 HANDSHAKE_TIMEOUT = 10
 
+
 class StreamClosed(ConnectionError):
     """The bridge ended our session on purpose (another app took over, or the area was stopped)."""
 
@@ -33,15 +35,17 @@ class StreamClosed(ConnectionError):
 Frame = dict[int, tuple[float, float, float]]
 
 
-def build_packet(zone_id: str, seq: int, frame: Frame, brightness: float = 1.0) -> bytes:
+def build_packet(
+    zone_id: str, seq: int, frame: Frame, brightness: float = 1.0
+) -> bytes:
     header = (
         b"HueStream"
-        + bytes([0x02, 0x00])     # protocol version 2.0
-        + bytes([seq & 0xFF])     # sequence id (ignored by the bridge)
-        + bytes([0x00, 0x00])     # reserved
-        + bytes([0x00])           # colour space: RGB
-        + bytes([0x00])           # reserved
-        + zone_id.encode("ascii") # 36-char entertainment configuration id
+        + bytes([0x02, 0x00])  # protocol version 2.0
+        + bytes([seq & 0xFF])  # sequence id (ignored by the bridge)
+        + bytes([0x00, 0x00])  # reserved
+        + bytes([0x00])  # colour space: RGB
+        + bytes([0x00])  # reserved
+        + zone_id.encode("ascii")  # 36-char entertainment configuration id
     )
     body = b"".join(
         struct.pack(">BHHH", ch, *(_u16(c * brightness) for c in rgb))
@@ -73,12 +77,22 @@ class StreamStats:
 class DtlsStreamer:
     """Opens the DTLS session, then sends frames from `get_frame()` at `fps`."""
 
-    def __init__(self, host: str, app_key: str, client_key: str, zone_id: str, get_frame, fps: float = 50.0):
+    def __init__(
+        self,
+        host: str,
+        app_key: str,
+        client_key: str,
+        zone_id: str,
+        get_frame,
+        fps: float = 50.0,
+    ):
         self.host, self.zone_id, self.fps = host, zone_id, fps
         self.get_frame = get_frame  # -> (Frame, brightness)
         self.stats = StreamStats()
         self.error: str | None = None
-        self.closed_by_bridge = False  # True when the bridge ended the session deliberately
+        self.closed_by_bridge = (
+            False  # True when the bridge ended the session deliberately
+        )
         self._identity = app_key.encode()
         self._psk = bytes.fromhex(client_key)
         self._stop = threading.Event()
@@ -94,7 +108,9 @@ class DtlsStreamer:
     def start(self):
         self._open()
         self._stop.clear()
-        self._thread = threading.Thread(target=self._loop, name="hue-stream", daemon=True)
+        self._thread = threading.Thread(
+            target=self._loop, name="hue-stream", daemon=True
+        )
         self._thread.start()
 
     def stop(self):
@@ -113,7 +129,9 @@ class DtlsStreamer:
 
         identity, psk = self._identity, self._psk
 
-        @ffi.callback("unsigned int(SSL *, const char *, char *, unsigned int, unsigned char *, unsigned int)")
+        @ffi.callback(
+            "unsigned int(SSL *, const char *, char *, unsigned int, unsigned char *, unsigned int)"
+        )
         def psk_cb(_ssl, _hint, out_identity, max_identity, out_psk, max_psk):
             if len(identity) + 1 > max_identity or len(psk) > max_psk:
                 return 0
@@ -128,7 +146,9 @@ class DtlsStreamer:
     def _open(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect((socket.gethostbyname(self.host), STREAM_PORT))
-        conn = SSL.Connection(self._context(), None)  # memory BIOs; we move the datagrams
+        conn = SSL.Connection(
+            self._context(), None
+        )  # memory BIOs; we move the datagrams
         conn.set_connect_state()
         self._sock, self._conn = sock, conn
 
@@ -148,7 +168,12 @@ class DtlsStreamer:
                 conn.bio_write(sock.recv(4096))
             else:
                 conn.DTLSv1_handle_timeout()  # retransmit the flight if due
-        log.info("DTLS stream open to %s:%d (%s)", self.host, STREAM_PORT, conn.get_cipher_name())
+        log.info(
+            "DTLS stream open to %s:%d (%s)",
+            self.host,
+            STREAM_PORT,
+            conn.get_cipher_name(),
+        )
 
     def _flush(self):
         while True:

@@ -6,13 +6,14 @@ and live state. All endpoints live under /api/v1. Interactive docs at /docs.
 Run from the repository root:  python -m standalone.server [--port 8080]
 Config file: data/config.json, or the path in HUE_ENTERTAINMENT_CONFIG.
 """
+
 import argparse
 import asyncio
 import contextlib
 import logging
 import os
-import sys
 from pathlib import Path
+import sys
 
 from fastapi import APIRouter, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +34,9 @@ from .config_store import ConfigStore  # noqa: E402
 CONFIG_ENV = "HUE_ENTERTAINMENT_CONFIG"
 DEFAULT_CONFIG = REPO / "data" / "config.json"
 BUILTIN_SCENES = REPO / "custom_components" / "ha_hue_entertainment" / "scenes"
-USER_SCENES = REPO / "data" / "scenes"  # your own *.json scenes; same id replaces a built-in
+USER_SCENES = (
+    REPO / "data" / "scenes"
+)  # your own *.json scenes; same id replaces a built-in
 
 log = logging.getLogger("ha_hue_entertainment.standalone")
 
@@ -54,36 +57,52 @@ class ZoneSelect(BaseModel):
 
 
 class StreamStart(BaseModel):
-    fps: float = Field(50, ge=1, le=60, description="Packets per second sent to the bridge")
+    fps: float = Field(
+        50, ge=1, le=60, description="Packets per second sent to the bridge"
+    )
 
 
 class ColorsRequest(BaseModel):
     channels: dict[str, ColorValue] | None = Field(
-        None, description='Per-channel colours, e.g. {"0": [255, 0, 0], "3": "#00ff00"}')
-    all: ColorValue | None = Field(None, description="Set every channel to this colour first")
-    brightness: float | None = Field(None, ge=0, le=1, description="Global brightness multiplier")
-    overlay: bool = Field(False, description="Draw on top of a running scene instead of replacing it")
-    duration: float | None = Field(None, gt=0, description="Overlay lifetime in seconds")
+        None, description='Per-channel colours, e.g. {"0": [255, 0, 0], "3": "#00ff00"}'
+    )
+    all: ColorValue | None = Field(
+        None, description="Set every channel to this colour first"
+    )
+    brightness: float | None = Field(
+        None, ge=0, le=1, description="Global brightness multiplier"
+    )
+    overlay: bool = Field(
+        False, description="Draw on top of a running scene instead of replacing it"
+    )
+    duration: float | None = Field(
+        None, gt=0, description="Overlay lifetime in seconds"
+    )
     clear_overlay: bool = Field(False, description="Remove all overlays first")
 
 
 class ScenePlay(BaseModel):
     scene: str = Field(description="Scene id, see GET /scenes")
-    params: dict | None = Field(None, description="Scene parameters; defaults for the rest")
+    params: dict | None = Field(
+        None, description="Scene parameters; defaults for the rest"
+    )
     speed: float | None = Field(None, gt=0, le=10, description="Speed multiplier")
 
 
 # ---- app -----------------------------------------------------------------
 
+
 def create_app() -> FastAPI:
     store = ConfigStore(os.environ.get(CONFIG_ENV, DEFAULT_CONFIG))
-    engine = HueSyncEngine(store.settings, store.save, app_name="ha_hue_entertainment#standalone")
+    engine = HueSyncEngine(
+        store.settings, store.save, app_name="ha_hue_entertainment#standalone"
+    )
     scenes, _ = load_scene_dir(BUILTIN_SCENES, builtin=True)
     user_scenes, scene_errors = load_scene_dir(USER_SCENES)
     for err in scene_errors:
         log.warning("Scene not loaded: %s", err)
     engine.set_scenes({**scenes, **user_scenes})
-    sockets: set["Client"] = set()
+    sockets: set[Client] = set()
 
     async def broadcast_status():
         msg = {"type": "status", **engine.status()}
@@ -117,7 +136,9 @@ def create_app() -> FastAPI:
         await engine.shutdown()
 
     app = FastAPI(title="Hue Entertainment Server", version="1.0", lifespan=lifespan)
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    )
     app.state.engine = engine
 
     @app.exception_handler(LinkButtonNotPressed)
@@ -142,8 +163,11 @@ def create_app() -> FastAPI:
     async def discover():
         return await engine.discover()
 
-    @api.post("/bridge/pair", summary="Pair with a bridge (press its link button first)",
-              responses={428: {"description": "Link button not pressed"}})
+    @api.post(
+        "/bridge/pair",
+        summary="Pair with a bridge (press its link button first)",
+        responses={428: {"description": "Link button not pressed"}},
+    )
     async def pair(req: PairRequest):
         return await engine.pair(req.host)
 
@@ -180,15 +204,33 @@ def create_app() -> FastAPI:
     async def get_colors():
         return engine.colors()
 
-    @api.put("/colors", summary="Set channel colours (use the WebSocket for high rates)")
+    @api.put(
+        "/colors", summary="Set channel colours (use the WebSocket for high rates)"
+    )
     async def put_colors(req: ColorsRequest):
-        engine.set_colors(req.channels, req.all, req.brightness, req.overlay, req.duration, req.clear_overlay)
+        engine.set_colors(
+            req.channels,
+            req.all,
+            req.brightness,
+            req.overlay,
+            req.duration,
+            req.clear_overlay,
+        )
         return engine.colors()
 
     @api.get("/scenes", summary="Available scenes and their parameters")
     async def list_scenes():
-        return [{"id": s.id, "name": s.name, "description": s.description, "builtin": s.builtin,
-                 "parameters": s.parameters, "duration": s.duration} for s in engine.scenes.values()]
+        return [
+            {
+                "id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "builtin": s.builtin,
+                "parameters": s.parameters,
+                "duration": s.duration,
+            }
+            for s in engine.scenes.values()
+        ]
 
     @api.post("/scene/play", summary="Play a scene; starts streaming if needed")
     async def play_scene(req: ScenePlay):
@@ -216,8 +258,14 @@ def create_app() -> FastAPI:
                 kind = msg.get("type")
                 try:
                     if kind == "colors":
-                        engine.set_colors(msg.get("channels"), msg.get("all"), msg.get("brightness"),
-                                          bool(msg.get("overlay")), msg.get("duration"), bool(msg.get("clear_overlay")))
+                        engine.set_colors(
+                            msg.get("channels"),
+                            msg.get("all"),
+                            msg.get("brightness"),
+                            bool(msg.get("overlay")),
+                            msg.get("duration"),
+                            bool(msg.get("clear_overlay")),
+                        )
                     elif kind == "subscribe":
                         client.want_colors = bool(msg.get("colors", True))
                         client.seen_version = -1
@@ -255,9 +303,13 @@ def main():
     args = ap.parse_args()
 
     import uvicorn
+
     # Everything (ours and uvicorn's) goes to stdout, which add-on log viewers show.
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
-                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=sys.stdout,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_config=None)
 
 

@@ -2,11 +2,10 @@
 
 Scenes are the light's effects. Picking a colour or the "off" effect stops a scene.
 """
+
 from __future__ import annotations
 
 from typing import Any
-
-import voluptuous as vol
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -19,9 +18,11 @@ from homeassistant.components.light import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+import voluptuous as vol
 
 from . import HueEntertainmentConfigEntry
 from .core.bridge import BridgeError
@@ -42,7 +43,9 @@ COLOR = vol.Any(cv.string, [vol.Coerce(float)])
 SET_COLORS_SCHEMA = {
     vol.Optional(ATTR_CHANNELS): {vol.Coerce(int): COLOR},
     vol.Optional(ATTR_ALL): COLOR,
-    vol.Optional(ATTR_BRIGHTNESS_PCT): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
+    vol.Optional(ATTR_BRIGHTNESS_PCT): vol.All(
+        vol.Coerce(float), vol.Range(min=0, max=100)
+    ),
     vol.Optional(ATTR_OVERLAY, default=False): cv.boolean,
     vol.Optional(ATTR_DURATION): vol.All(vol.Coerce(float), vol.Range(min=0.1)),
     vol.Optional(ATTR_CLEAR_OVERLAY, default=False): cv.boolean,
@@ -55,12 +58,18 @@ PLAY_SCENE_SCHEMA = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+    hass: HomeAssistant,
+    entry: HueEntertainmentConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     async_add_entities([EntertainmentLight(entry.runtime_data)])
     platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service("set_colors", SET_COLORS_SCHEMA, "async_set_colors")
-    platform.async_register_entity_service("play_scene", PLAY_SCENE_SCHEMA, "async_play_scene")
+    platform.async_register_entity_service(
+        "set_colors", SET_COLORS_SCHEMA, "async_set_colors"
+    )
+    platform.async_register_entity_service(
+        "play_scene", PLAY_SCENE_SCHEMA, "async_play_scene"
+    )
     platform.async_register_entity_service("stop_scene", None, "async_stop_scene")
 
 
@@ -77,7 +86,9 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if (last := await self.async_get_last_state()) and (rgb := last.attributes.get(ATTR_RGB_COLOR)):
+        if (last := await self.async_get_last_state()) and (
+            rgb := last.attributes.get(ATTR_RGB_COLOR)
+        ):
             bri = last.attributes.get(ATTR_BRIGHTNESS)
             self.engine.set_colors(all=list(rgb), brightness=bri / 255 if bri else None)
 
@@ -87,7 +98,9 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
         """Effect label -> scene id. Labels are scene names, made unique if needed."""
         names: dict[str, str] = {}
         for scene in sorted(self.engine.scenes.values(), key=lambda s: s.name.lower()):
-            label = scene.name if scene.name not in names else f"{scene.name} ({scene.id})"
+            label = (
+                scene.name if scene.name not in names else f"{scene.name} ({scene.id})"
+            )
             names[label] = scene.id
         return names
 
@@ -102,7 +115,9 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
     @property
     def effect(self) -> str:
         sid = self.engine.scene_id
-        return next((label for label, i in self._effect_names().items() if i == sid), EFFECT_OFF)
+        return next(
+            (label for label, i in self._effect_names().items() if i == sid), EFFECT_OFF
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -111,7 +126,9 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
         if not zone:
             return {}
         return {
-            ATTR_CHANNELS: {ch["id"]: ", ".join(ch["lights"]) for ch in zone["channels"]},
+            ATTR_CHANNELS: {
+                ch["id"]: ", ".join(ch["lights"]) for ch in zone["channels"]
+            },
             ATTR_SCENE: self.engine.scene_id,
         }
 
@@ -131,8 +148,10 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
         effect = kwargs.get(ATTR_EFFECT)
         # A colour replaces a running scene; brightness alone keeps it playing.
         if rgb is not None or bri is not None:
-            self.engine.set_colors(all=list(rgb) if rgb is not None else None,
-                                   brightness=bri / 255 if bri is not None else None)
+            self.engine.set_colors(
+                all=list(rgb) if rgb is not None else None,
+                brightness=bri / 255 if bri is not None else None,
+            )
         if effect == EFFECT_OFF:
             await self.engine.stop_scene()
         elif effect is not None:
@@ -163,8 +182,15 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
     ) -> None:
         """Set colours per channel and/or for the whole area; starts sync if it is off.
         Without overlay they replace a running scene; with overlay they are drawn on top."""
-        if channels is None and all is None and brightness_pct is None and not clear_overlay:
-            raise ServiceValidationError("Give channels, all, brightness_pct or clear_overlay")
+        if (
+            channels is None
+            and all is None
+            and brightness_pct is None
+            and not clear_overlay
+        ):
+            raise ServiceValidationError(
+                "Give channels, all, brightness_pct or clear_overlay"
+            )
         try:
             self.engine.set_colors(
                 channels={str(ch): c for ch, c in (channels or {}).items()},
@@ -179,11 +205,17 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
         await self.async_start_sync()
         self.async_write_ha_state()
 
-    async def async_play_scene(self, scene: str, params: dict | None = None, speed: float | None = None) -> None:
+    async def async_play_scene(
+        self, scene: str, params: dict | None = None, speed: float | None = None
+    ) -> None:
         """Play a scene by id or name, with optional parameters; starts sync if it is off."""
-        scene_id = scene if scene in self.engine.scenes else self._effect_names().get(scene)
+        scene_id = (
+            scene if scene in self.engine.scenes else self._effect_names().get(scene)
+        )
         if scene_id is None:
-            raise ServiceValidationError(f"Unknown scene {scene!r}; available: {', '.join(self.engine.scenes)}")
+            raise ServiceValidationError(
+                f"Unknown scene {scene!r}; available: {', '.join(self.engine.scenes)}"
+            )
         if speed is not None:
             self.engine.speed = speed
         await self._play(scene_id, params)

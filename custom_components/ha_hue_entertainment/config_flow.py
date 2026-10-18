@@ -1,11 +1,9 @@
 """Config flow: find a Hue bridge and pair with it using the link button."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
-
-import httpx
-import voluptuous as vol
 
 from homeassistant.components import zeroconf
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
@@ -17,6 +15,8 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
 )
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+import httpx
+import voluptuous as vol
 
 from .const import APP_NAME, CONF_APP_KEY, CONF_BRIDGE_ID, CONF_CLIENT_KEY, DOMAIN
 from .core.bridge import BridgeError, HueBridge, LinkButtonNotPressed, discover
@@ -39,7 +39,9 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
     def _bridge(self, host: str) -> HueBridge:
         return HueBridge(host, http=get_async_client(self.hass, verify_ssl=False))
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Show discovered bridges, or go straight to manual entry if there are none."""
         if user_input is not None:
             if user_input[CONF_HOST] == MANUAL:
@@ -48,18 +50,33 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
 
         azc = await zeroconf.async_get_async_instance(self.hass)
         configured = {e.unique_id for e in self._async_current_entries()}
-        self._discovered = {b["host"]: b for b in await discover(azc) if b["id"] not in configured}
+        self._discovered = {
+            b["host"]: b for b in await discover(azc) if b["id"] not in configured
+        }
         if not self._discovered:
             return await self.async_step_manual()
 
-        options = [SelectOptionDict(value=host, label=f"{b['name']} ({host})") for host, b in self._discovered.items()]
-        options.append(SelectOptionDict(value=MANUAL, label="Enter IP address manually"))
+        options = [
+            SelectOptionDict(value=host, label=f"{b['name']} ({host})")
+            for host, b in self._discovered.items()
+        ]
+        options.append(
+            SelectOptionDict(value=MANUAL, label="Enter IP address manually")
+        )
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_HOST): SelectSelector(SelectSelectorConfig(options=options))}),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST): SelectSelector(
+                        SelectSelectorConfig(options=options)
+                    )
+                }
+            ),
         )
 
-    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
+    async def async_step_zeroconf(
+        self, discovery_info: ZeroconfServiceInfo
+    ) -> ConfigFlowResult:
         """A bridge announced itself on the network.
 
         Known bridges get their address updated (this is how IP changes are
@@ -77,7 +94,9 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {"name": self._name}
         return await self.async_step_link()
 
-    async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Enter the bridge address by hand."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -90,7 +109,9 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _async_use_host(self, host: str, errors: dict[str, str] | None = None) -> ConfigFlowResult | None:
+    async def _async_use_host(
+        self, host: str, errors: dict[str, str] | None = None
+    ) -> ConfigFlowResult | None:
         """Identify the bridge at `host`, refuse duplicates, then ask for the link button."""
         try:
             info = await self._bridge(host).info()
@@ -104,7 +125,9 @@ class HueEntertainmentConfigFlow(ConfigFlow, domain=DOMAIN):
         self._host, self._name = host, info.get("name") or "Hue bridge"
         return await self.async_step_link()
 
-    async def async_step_link(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_link(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Wait for the user to press the link button, then pair."""
         errors: dict[str, str] = {}
         if user_input is not None:

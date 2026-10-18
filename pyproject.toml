@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # import sorting
+  "B",   # bugbear: likely bugs
+  "UP",  # pyupgrade: modern Python
+]
+# Line length is the formatter's job; it leaves long strings and comments alone,
+# as Home Assistant core does.
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "core", "standalone"]
+force-sort-within-sections = true

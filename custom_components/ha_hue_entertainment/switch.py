@@ -1,4 +1,5 @@
 """Configuration switch: may starting sync stop another app's stream?"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -14,7 +15,9 @@ from .entity import HueEntertainmentEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+    hass: HomeAssistant,
+    entry: HueEntertainmentConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     async_add_entities([AllowOverrideSwitch(entry)])
 

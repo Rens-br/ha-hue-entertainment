@@ -1,4 +1,5 @@
 """Hue Entertainment: stream colours and animations to a Hue entertainment area."""
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,9 @@ type HueEntertainmentConfigEntry = ConfigEntry[HueSyncEngine]
 PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry
+) -> bool:
     """Connect to the bridge and load the selected entertainment zone."""
     settings = Settings(
         bridge_host=entry.data[CONF_HOST],
@@ -47,7 +50,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEn
     def save(s: Settings) -> None:
         # The engine updates these when the bridge moves or another zone is selected.
         hass.config_entries.async_update_entry(
-            entry, data={**entry.data, CONF_HOST: s.bridge_host, CONF_SELECTED_ZONE: s.selected_zone}
+            entry,
+            data={
+                **entry.data,
+                CONF_HOST: s.bridge_host,
+                CONF_SELECTED_ZONE: s.selected_zone,
+            },
         )
 
     engine = HueSyncEngine(
@@ -58,11 +66,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEn
         app_name=APP_NAME,
     )
     engine.allow_override = entry.options.get(CONF_ALLOW_OVERRIDE, False)
-    engine.set_scenes(await hass.async_add_executor_job(_load_scenes, Path(hass.config.path(DOMAIN, "scenes"))))
+    engine.set_scenes(
+        await hass.async_add_executor_job(
+            _load_scenes, Path(hass.config.path(DOMAIN, "scenes"))
+        )
+    )
     await engine.startup()
     if not engine.bridge_name:
         await engine.shutdown()
-        raise ConfigEntryNotReady(engine.last_error or f"Bridge at {settings.bridge_host} is not reachable")
+        raise ConfigEntryNotReady(
+            engine.last_error or f"Bridge at {settings.bridge_host} is not reachable"
+        )
 
     info = engine.bridge_info
     dr.async_get(hass).async_get_or_create(
@@ -92,7 +106,9 @@ def _load_scenes(user_dir: Path) -> dict[str, Scene]:
     return {**builtin, **user}
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry
+) -> bool:
     """Stop any stream and release the bridge."""
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False

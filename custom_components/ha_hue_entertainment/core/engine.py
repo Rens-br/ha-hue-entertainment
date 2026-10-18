@@ -6,11 +6,12 @@ Streaming is desired-state: once a stream has started, a watchdog keeps it
 alive. If the bridge reboots, changes IP, or another app takes the stream,
 it reconnects with backoff until `stop_stream()` is called.
 """
+
 import asyncio
+from collections.abc import Callable
 import inspect
 import logging
 import time
-from collections.abc import Callable
 
 import httpx
 
@@ -25,9 +26,9 @@ Color = tuple[float, float, float]
 
 WARM_WHITE: Color = (1.0, 0.66, 0.34)  # roughly 2700 K
 
-WATCHDOG_INTERVAL = 2.0     # how often the watchdog looks at the stream
+WATCHDOG_INTERVAL = 2.0  # how often the watchdog looks at the stream
 BRIDGE_CHECK_INTERVAL = 10  # how often it asks the bridge if our stream is still active
-ACTIVATE_TIMEOUT = 3.0      # time for the bridge to mark the zone active after "start"
+ACTIVATE_TIMEOUT = 3.0  # time for the bridge to mark the zone active after "start"
 MAX_BACKOFF = 30.0
 
 
@@ -36,8 +37,14 @@ def to_hex(c: Color) -> str:
 
 
 class HueSyncEngine:
-    def __init__(self, settings: Settings, save: Callable[[Settings], object],
-                 http: httpx.AsyncClient | None = None, zeroconf=None, app_name: str = "ha_hue_entertainment#core"):
+    def __init__(
+        self,
+        settings: Settings,
+        save: Callable[[Settings], object],
+        http: httpx.AsyncClient | None = None,
+        zeroconf=None,
+        app_name: str = "ha_hue_entertainment#core",
+    ):
         """`save(settings)` persists changes (may be async). `http` and `zeroconf` let
         the host share its clients; otherwise the core creates its own."""
         self.settings = settings
@@ -47,27 +54,33 @@ class HueSyncEngine:
         self._app_name = app_name
         self.bridge: HueBridge | None = None
         self.bridge_name: str | None = None
-        self.bridge_info: dict = {}     # /api/config: name, modelid, swversion, …
+        self.bridge_info: dict = {}  # /api/config: name, modelid, swversion, …
         self.zone: dict | None = None
         self.streamer: DtlsStreamer | None = None
         self.frame: Frame = {}
         self.brightness = 1.0
-        self.base_color: Color = WARM_WHITE  # whole-area colour; what a new stream starts with
-        self.allow_override = False  # may a start by the user stop another app's stream?
+        self.base_color: Color = (
+            WARM_WHITE  # whole-area colour; what a new stream starts with
+        )
+        self.allow_override = (
+            False  # may a start by the user stop another app's stream?
+        )
 
-        self.scenes: dict[str, Scene] = {}     # available scenes by id, set by the host
+        self.scenes: dict[str, Scene] = {}  # available scenes by id, set by the host
         self.scene_run: SceneRun | None = None  # the scene playing now
-        self.speed = 1.0                       # scene speed multiplier
-        self.overlays: dict[int, tuple[Color, float | None]] = {}  # ch -> (colour, expires at)
+        self.speed = 1.0  # scene speed multiplier
+        self.overlays: dict[
+            int, tuple[Color, float | None]
+        ] = {}  # ch -> (colour, expires at)
         self._render_at: float | None = None
         self._scene_ended = False
-        self.frame_version = 0          # bumps on every colour change
+        self.frame_version = 0  # bumps on every colour change
         self.command_rate = 0.0
         self._cmd_count = 0
         self._cmd_window = time.monotonic()
 
         self.want_fps: float | None = None  # set while the user wants a stream
-        self.stream_state = "off"           # off | streaming | reconnecting
+        self.stream_state = "off"  # off | streaming | reconnecting
         self.last_error: str | None = None
         self._retry_at = 0.0
         self._backoff = WATCHDOG_INTERVAL
@@ -148,10 +161,10 @@ class HueSyncEngine:
             raise BridgeError("Not paired with a bridge")
         try:
             return await fn(self.bridge)
-        except httpx.TransportError:
+        except httpx.TransportError as err:
             if await self._relocate_bridge():
                 return await fn(self.bridge)
-            raise BridgeError(f"Bridge at {self.bridge.host} is not reachable")
+            raise BridgeError(f"Bridge at {self.bridge.host} is not reachable") from err
 
     async def _relocate_bridge(self) -> bool:
         """Find the paired bridge by its ID via mDNS; update the saved host if it moved."""
@@ -160,7 +173,12 @@ class HueSyncEngine:
             return False
         for b in await discover(self._zeroconf):
             if b["id"].upper() == s.bridge_id.upper() and b["host"] != self.bridge.host:
-                log.warning("Bridge %s moved: %s -> %s", s.bridge_id, self.bridge.host, b["host"])
+                log.warning(
+                    "Bridge %s moved: %s -> %s",
+                    s.bridge_id,
+                    self.bridge.host,
+                    b["host"],
+                )
                 self.bridge.host = s.bridge_host = b["host"]
                 await self._save()
                 return True
@@ -170,13 +188,16 @@ class HueSyncEngine:
 
     async def list_zones(self) -> list[dict]:
         configs = await self._call(lambda b: b.entertainment_configurations())
-        return [{
-            "id": c["id"],
-            "name": c["metadata"]["name"],
-            "type": c.get("configuration_type"),
-            "status": c.get("status"),
-            "channel_count": len(c.get("channels", [])),
-        } for c in configs]
+        return [
+            {
+                "id": c["id"],
+                "name": c["metadata"]["name"],
+                "type": c.get("configuration_type"),
+                "status": c.get("status"),
+                "channel_count": len(c.get("channels", [])),
+            }
+            for c in configs
+        ]
 
     async def _load_zone(self, zone_id: str):
         self.zone = await self._call(lambda b: b.zone(zone_id))
@@ -188,8 +209,10 @@ class HueSyncEngine:
         self.frame_version += 1
 
     def _positions(self) -> dict[int, tuple[float, float, float]]:
-        return {ch["id"]: (ch["position"]["x"], ch["position"]["y"], ch["position"]["z"])
-                for ch in self.zone["channels"]}
+        return {
+            ch["id"]: (ch["position"]["x"], ch["position"]["y"], ch["position"]["z"])
+            for ch in self.zone["channels"]
+        }
 
     async def select_zone(self, zone_id: str) -> dict:
         """Select a zone. While syncing, the stream moves to the new zone in one
@@ -235,7 +258,9 @@ class HueSyncEngine:
         self._render_at = now
         frame = self.frame
         if self.overlays:
-            live = {ch: o for ch, o in self.overlays.items() if o[1] is None or o[1] > now}
+            live = {
+                ch: o for ch, o in self.overlays.items() if o[1] is None or o[1] > now
+            }
             if len(live) != len(self.overlays):
                 self.overlays = live
                 self.frame_version += 1
@@ -268,19 +293,25 @@ class HueSyncEngine:
         streaming means another app (e.g. a Hue Sync Box) holds it."""
         holder = await self._call(lambda b: b.stream_holder())
         if holder:
-            return BridgeError(f"Bridge is busy: {holder} is syncing. "
-                               "Only one entertainment stream can run at a time.")
+            return BridgeError(
+                f"Bridge is busy: {holder} is syncing. "
+                "Only one entertainment stream can run at a time."
+            )
         return None
 
     async def _take_over(self):
         """Stop whatever other app is streaming, then wait until the bridge is free."""
         for other in await self._call(lambda b: b.active_streams()):
-            log.info("Override: stopping %s's stream on '%s'", other["app"], other["name"])
+            log.info(
+                "Override: stopping %s's stream on '%s'", other["app"], other["name"]
+            )
             await self._call(lambda b, zid=other["id"]: b.set_streaming(zid, False))
         deadline = time.monotonic() + ACTIVATE_TIMEOUT
         while await self._call(lambda b: b.active_streams()):
             if time.monotonic() > deadline:
-                raise await self._busy_error() or BridgeError("Could not take over the bridge")
+                raise await self._busy_error() or BridgeError(
+                    "Could not take over the bridge"
+                )
             await asyncio.sleep(0.25)
 
     async def _open_stream(self, fps: float, override: bool = False):
@@ -298,9 +329,13 @@ class HueSyncEngine:
             deadline = time.monotonic() + ACTIVATE_TIMEOUT
             while await self._call(lambda b: b.zone_status(zid)) != "active":
                 if time.monotonic() > deadline:
-                    raise await self._busy_error() or BridgeError("The bridge did not activate the entertainment area")
+                    raise await self._busy_error() or BridgeError(
+                        "The bridge did not activate the entertainment area"
+                    )
                 await asyncio.sleep(0.25)
-            streamer = DtlsStreamer(s.bridge_host, s.app_key, s.client_key, zid, self._current_frame, fps)
+            streamer = DtlsStreamer(
+                s.bridge_host, s.app_key, s.client_key, zid, self._current_frame, fps
+            )
             try:
                 await asyncio.to_thread(streamer.start)
             except (OSError, TimeoutError) as e:
@@ -325,7 +360,11 @@ class HueSyncEngine:
             holder = None
         self.want_fps = None
         self.stream_state = "off"
-        self.last_error = f"Stopped: {holder} took over" if holder else "Stopped by another app or the bridge"
+        self.last_error = (
+            f"Stopped: {holder} took over"
+            if holder
+            else "Stopped by another app or the bridge"
+        )
         log.info("Sync ended by the bridge (%s); not reconnecting", self.last_error)
         await self._notify()
 
@@ -364,17 +403,22 @@ class HueSyncEngine:
             if not self.want_fps:
                 return
             now = time.monotonic()
-            lost = None    # failure: reconnect
+            lost = None  # failure: reconnect
             ended = False  # ended on purpose (another app, the Hue app): accept it
             if not self.streaming:
                 if self.streamer and self.streamer.closed_by_bridge:
                     ended = True
                 else:
-                    lost = (self.streamer and self.streamer.error) or "stream not running"
+                    lost = (
+                        self.streamer and self.streamer.error
+                    ) or "stream not running"
             elif now - self._last_bridge_check >= BRIDGE_CHECK_INTERVAL:
                 self._last_bridge_check = now
                 try:
-                    if await self._call(lambda b: b.zone_status(self.zone["id"])) != "active":
+                    if (
+                        await self._call(lambda b: b.zone_status(self.zone["id"]))
+                        != "active"
+                    ):
                         ended = True
                 except BridgeError as e:
                     lost = str(e)
@@ -395,7 +439,9 @@ class HueSyncEngine:
             except Exception as e:
                 self.last_error = str(e)
                 self._retry_at = now + self._backoff
-                log.warning("Reconnect failed (%s); next try in %.0f s", e, self._backoff)
+                log.warning(
+                    "Reconnect failed (%s); next try in %.0f s", e, self._backoff
+                )
                 self._backoff = min(self._backoff * 2, MAX_BACKOFF)
         await self._notify()
 
@@ -428,8 +474,15 @@ class HueSyncEngine:
 
     # ---- colours ---------------------------------------------------------
 
-    def set_colors(self, channels: dict | None = None, all=None, brightness: float | None = None,
-                   overlay: bool = False, duration: float | None = None, clear_overlay: bool = False):
+    def set_colors(
+        self,
+        channels: dict | None = None,
+        all=None,
+        brightness: float | None = None,
+        overlay: bool = False,
+        duration: float | None = None,
+        clear_overlay: bool = False,
+    ):
         """Update the frame. Unlisted channels keep their colour.
 
         Colours replace a running scene, unless `overlay` is set: then they are
@@ -443,12 +496,17 @@ class HueSyncEngine:
             self.overlays = {}
         if overlay:
             expires = time.monotonic() + duration if duration else None
-            targets = {ch: parse_color(all) for ch in self.frame} if all is not None else {}
+            targets = (
+                {ch: parse_color(all) for ch in self.frame} if all is not None else {}
+            )
             for key, value in (channels or {}).items():
                 if int(key) not in self.frame:
                     raise ValueError(f"channel {int(key)} not in zone")
                 targets[int(key)] = parse_color(value)
-            self.overlays = {**self.overlays, **{ch: (c, expires) for ch, c in targets.items()}}
+            self.overlays = {
+                **self.overlays,
+                **{ch: (c, expires) for ch, c in targets.items()},
+            }
             if brightness is not None:
                 self.brightness = max(0.0, min(1.0, float(brightness)))
             self.frame_version += 1
@@ -480,8 +538,11 @@ class HueSyncEngine:
             self._cmd_count, self._cmd_window = 0, now
 
     def colors(self) -> dict:
-        return {"channels": {str(ch): to_hex(c) for ch, c in sorted(self.frame.items())},
-                "brightness": self.brightness, "version": self.frame_version}
+        return {
+            "channels": {str(ch): to_hex(c) for ch, c in sorted(self.frame.items())},
+            "brightness": self.brightness,
+            "version": self.frame_version,
+        }
 
     # ---- status ----------------------------------------------------------
 
@@ -489,9 +550,20 @@ class HueSyncEngine:
         s, st = self.settings, self.streamer
         return {
             "paired": bool(self.bridge),
-            "bridge": {"host": s.bridge_host, "id": s.bridge_id, "name": self.bridge_name} if self.bridge else None,
-            "zone": {"id": self.zone["id"], "name": self.zone["name"],
-                     "channels": len(self.zone["channels"])} if self.zone else None,
+            "bridge": {
+                "host": s.bridge_host,
+                "id": s.bridge_id,
+                "name": self.bridge_name,
+            }
+            if self.bridge
+            else None,
+            "zone": {
+                "id": self.zone["id"],
+                "name": self.zone["name"],
+                "channels": len(self.zone["channels"]),
+            }
+            if self.zone
+            else None,
             "streaming": {
                 "active": self.streaming,
                 "state": self.stream_state,
@@ -500,7 +572,11 @@ class HueSyncEngine:
                 "packets": st.stats.packets if st else 0,
                 "error": self.last_error,
             },
-            "scene": {"id": self.scene_id, "speed": self.speed, "overlays": len(self.overlays)},
+            "scene": {
+                "id": self.scene_id,
+                "speed": self.speed,
+                "overlays": len(self.overlays),
+            },
             "commands_per_sec": round(self.command_rate, 1),
         }
 

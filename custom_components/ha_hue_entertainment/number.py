@@ -1,4 +1,5 @@
 """Scene speed."""
+
 from __future__ import annotations
 
 from homeassistant.components.number import NumberMode, RestoreNumber
@@ -10,7 +11,9 @@ from .entity import HueEntertainmentEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+    hass: HomeAssistant,
+    entry: HueEntertainmentConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     async_add_entities([SceneSpeed(entry.runtime_data)])
 
@@ -29,7 +32,9 @@ class SceneSpeed(HueEntertainmentEntity, RestoreNumber):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if (last := await self.async_get_last_number_data()) and last.native_value is not None:
+        if (
+            last := await self.async_get_last_number_data()
+        ) and last.native_value is not None:
             self.engine.speed = last.native_value
 
     @property

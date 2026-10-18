@@ -4,6 +4,7 @@ Where they are stored is up to the caller (a config entry in Home Assistant,
 a JSON file for the standalone server); the engine reports changes through a
 save callback.
 """
+
 from dataclasses import dataclass
 
 
@@ -11,8 +12,8 @@ from dataclasses import dataclass
 class Settings:
     bridge_host: str | None = None
     bridge_id: str | None = None
-    app_key: str | None = None      # "username" from pairing; also the DTLS PSK identity
-    client_key: str | None = None   # hex PSK for DTLS streaming
+    app_key: str | None = None  # "username" from pairing; also the DTLS PSK identity
+    client_key: str | None = None  # hex PSK for DTLS streaming
     selected_zone: str | None = None
 
     @property

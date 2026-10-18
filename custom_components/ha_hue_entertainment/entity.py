@@ -1,4 +1,5 @@
 """Base entity: belongs to the bridge device and follows engine status changes."""
+
 from __future__ import annotations
 
 from homeassistant.core import Context

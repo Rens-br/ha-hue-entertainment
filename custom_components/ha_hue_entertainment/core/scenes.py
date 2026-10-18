@@ -35,15 +35,16 @@ Layer types (all accept "blend": "normal" | "add" | "max", "opacity": 0..1):
 - flash:    color, rate (strikes/s), spread (units/s, 0 = everywhere at once),
             decay (s), flicker (pulses per strike)
 """
+
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
 import logging
 import math
+from pathlib import Path
 import random
 import re
-from dataclasses import dataclass, field
-from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -67,23 +68,26 @@ def parse_color(value) -> Color:
         if len(h) not in (6, 8):
             raise ValueError(f"bad hex colour {value!r}")
         try:
-            value = [int(h[i:i + 2], 16) for i in range(0, len(h), 2)]
+            value = [int(h[i : i + 2], 16) for i in range(0, len(h), 2)]
         except ValueError:
             raise ValueError(f"bad hex colour {value!r}") from None
     if isinstance(value, (list, tuple)) and len(value) in (3, 4):
         v = [max(0.0, min(255.0, float(x))) / 255 for x in value]
         scale = v[3] if len(v) == 4 else 1.0
         return tuple(c * scale for c in v[:3])
-    raise ValueError(f"bad colour {value!r}; use [r,g,b], [r,g,b,brightness] (0-255), '#rrggbb' or '#rrggbbBB'")
+    raise ValueError(
+        f"bad colour {value!r}; use [r,g,b], [r,g,b,brightness] (0-255), '#rrggbb' or '#rrggbbBB'"
+    )
 
 
 # ---- definition ----------------------------------------------------------
+
 
 @dataclass
 class Scene:
     id: str
     name: str
-    raw: dict                          # the validated JSON, for export
+    raw: dict  # the validated JSON, for export
     parameters: dict[str, dict] = field(default_factory=dict)
     duration: float | None = None
     description: str = ""
@@ -96,6 +100,7 @@ class Scene:
 
 def load_scene(data: dict, source: str = "scene", builtin: bool = False) -> Scene:
     """Validate a scene definition and return it. Raises SceneError."""
+
     def fail(msg):
         raise SceneError(f"{source}: {msg}")
 
@@ -116,7 +121,9 @@ def load_scene(data: dict, source: str = "scene", builtin: bool = False) -> Scen
         _check_parameter(pname, p, fail)
 
     duration = data.get("duration")
-    if duration is not None and (not isinstance(duration, (int, float)) or duration <= 0):
+    if duration is not None and (
+        not isinstance(duration, (int, float)) or duration <= 0
+    ):
         fail('"duration" must be a positive number of seconds')
 
     layers = data.get("layers")
@@ -124,12 +131,24 @@ def load_scene(data: dict, source: str = "scene", builtin: bool = False) -> Scen
         fail('"layers" must be a non-empty list')
     for i, layer in enumerate(layers):
         try:
-            _build_layer(layer, params, params_values={n: p["default"] for n, p in params.items()})
+            _build_layer(
+                layer,
+                params,
+                params_values={n: p["default"] for n, p in params.items()},
+            )
         except (SceneError, ValueError, TypeError, KeyError) as e:
             fail(f"layer {i + 1}: {e}")
 
-    return Scene(id=sid, name=name.strip(), raw=data, parameters=params, duration=duration,
-                 description=data.get("description", ""), author=data.get("author", ""), builtin=builtin)
+    return Scene(
+        id=sid,
+        name=name.strip(),
+        raw=data,
+        parameters=params,
+        duration=duration,
+        description=data.get("description", ""),
+        author=data.get("author", ""),
+        builtin=builtin,
+    )
 
 
 def _check_parameter(name: str, p, fail):
@@ -147,14 +166,18 @@ def _check_parameter(name: str, p, fail):
         fail(f'parameter "{name}": {e}')
 
 
-def load_scene_dir(path: Path, builtin: bool = False) -> tuple[dict[str, Scene], list[str]]:
+def load_scene_dir(
+    path: Path, builtin: bool = False
+) -> tuple[dict[str, Scene], list[str]]:
     """Load every *.json in `path`. Returns (scenes by id, error messages). Never raises."""
     scenes, errors = {}, []
     if not path.is_dir():
         return scenes, errors
     for file in sorted(path.glob("*.json")):
         try:
-            scene = load_scene(json.loads(file.read_text()), source=file.name, builtin=builtin)
+            scene = load_scene(
+                json.loads(file.read_text()), source=file.name, builtin=builtin
+            )
         except (OSError, json.JSONDecodeError) as e:
             errors.append(f"{file.name}: {e}")
             continue
@@ -169,6 +192,7 @@ def load_scene_dir(path: Path, builtin: bool = False) -> tuple[dict[str, Scene],
 
 
 # ---- layers --------------------------------------------------------------
+
 
 def _resolve(value, params_values: dict):
     if isinstance(value, str) and value.startswith("$"):
@@ -266,7 +290,9 @@ class Band(Layer):
             phase = 2.0 - phase
         centre = self.start + (self.end - self.start) * phase
         d = abs(_axis_value(pos, self.axis) - centre) / self.width
-        strength = max(0.0, 1.0 - d) ** 2 * (3 - 2 * max(0.0, 1.0 - d))  # smoothstep falloff
+        strength = max(0.0, 1.0 - d) ** 2 * (
+            3 - 2 * max(0.0, 1.0 - d)
+        )  # smoothstep falloff
         return self.color, strength
 
 
@@ -284,8 +310,11 @@ class Noise(Layer):
     def sample(self, ch, pos, t):
         x, y, z = (c * self.scale for c in pos)
         d = self.drift * t * 2 * math.pi
-        v = (math.sin(x * 1.7 + d) + math.sin(y * 2.3 - d * 0.7 + 1.3)
-             + math.sin((x + y + z) * 1.1 + d * 0.45 + 2.1)) / 6 + 0.5  # 0..1
+        v = (
+            math.sin(x * 1.7 + d)
+            + math.sin(y * 2.3 - d * 0.7 + 1.3)
+            + math.sin((x + y + z) * 1.1 + d * 0.45 + 2.1)
+        ) / 6 + 0.5  # 0..1
         return _palette(self.colors, v), 1.0
 
 
@@ -312,7 +341,11 @@ class Flash(Layer):
 
     def _advance(self, t):
         while t >= self._next:
-            origin = (self._rng.uniform(-1, 1), self._rng.uniform(-1, 1), self._rng.uniform(-0.5, 1))
+            origin = (
+                self._rng.uniform(-1, 1),
+                self._rng.uniform(-1, 1),
+                self._rng.uniform(-0.5, 1),
+            )
             self._strikes.append((self._next, origin))
             self._next += self._rng.expovariate(self.rate)
         lifetime = self.decay * self.flicker + 3 / max(self.spread, 0.1)
@@ -331,11 +364,17 @@ class Flash(Layer):
             pulse, phase = divmod(local, self.decay)
             if pulse >= self.flicker:
                 continue
-            strength = max(strength, (1 - phase / self.decay) ** 2 * (0.6 ** pulse))
+            strength = max(strength, (1 - phase / self.decay) ** 2 * (0.6**pulse))
         return self.color, strength
 
 
-LAYER_TYPES = {"solid": Solid, "gradient": Gradient, "band": Band, "noise": Noise, "flash": Flash}
+LAYER_TYPES = {
+    "solid": Solid,
+    "gradient": Gradient,
+    "band": Band,
+    "noise": Noise,
+    "flash": Flash,
+}
 
 
 def _build_layer(spec: dict, params: dict, params_values: dict) -> Layer:
@@ -346,27 +385,37 @@ def _build_layer(spec: dict, params: dict, params_values: dict) -> Layer:
 
 def _blend(base: Color, color: Color, strength: float, mode: str) -> Color:
     if mode == "add":
-        return tuple(min(1.0, b + c * strength) for b, c in zip(base, color))
+        return tuple(
+            min(1.0, b + c * strength) for b, c in zip(base, color, strict=True)
+        )
     if mode == "max":
-        return tuple(max(b, c * strength) for b, c in zip(base, color))
-    return tuple(b + (c - b) * strength for b, c in zip(base, color))
+        return tuple(max(b, c * strength) for b, c in zip(base, color, strict=True))
+    return tuple(b + (c - b) * strength for b, c in zip(base, color, strict=True))
 
 
 # ---- running ---------------------------------------------------------------
+
 
 class SceneRun:
     """A scene playing on a set of channel positions. render(dt) is called by the
     stream thread for every frame; it returns None once a play-once scene ends."""
 
-    def __init__(self, scene: Scene, positions: dict[int, Position], params: dict | None = None,
-                 seed: int | None = None):
+    def __init__(
+        self,
+        scene: Scene,
+        positions: dict[int, Position],
+        params: dict | None = None,
+        seed: int | None = None,
+    ):
         values = scene.defaults()
         for name, value in (params or {}).items():
             if name not in scene.parameters:
                 raise SceneError(f'{scene.id}: unknown parameter "{name}"')
             values[name] = value
         self.scene, self.params = scene, values
-        self.layers = [_build_layer(spec, scene.parameters, values) for spec in scene.raw["layers"]]
+        self.layers = [
+            _build_layer(spec, scene.parameters, values) for spec in scene.raw["layers"]
+        ]
         self.positions = positions
         self.time = 0.0
         rng = random.Random(seed)

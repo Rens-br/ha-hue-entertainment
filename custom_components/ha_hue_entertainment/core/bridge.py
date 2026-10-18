@@ -1,4 +1,5 @@
 """Hue bridge discovery, pairing and CLIP v2 REST calls."""
+
 import asyncio
 import logging
 
@@ -35,7 +36,11 @@ async def discover(azc=None, timeout: float = 3.0) -> list[dict]:
 
     try:
         from zeroconf import ServiceStateChange
-        from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
+        from zeroconf.asyncio import (
+            AsyncServiceBrowser,
+            AsyncServiceInfo,
+            AsyncZeroconf,
+        )
 
         own_zc = azc is None
         if own_zc:
@@ -46,17 +51,26 @@ async def discover(azc=None, timeout: float = 3.0) -> list[dict]:
             if state_change is ServiceStateChange.Added:
                 names.add(name)
 
-        browser = AsyncServiceBrowser(azc.zeroconf, "_hue._tcp.local.", handlers=[on_change])
+        browser = AsyncServiceBrowser(
+            azc.zeroconf, "_hue._tcp.local.", handlers=[on_change]
+        )
         await asyncio.sleep(timeout)
         for name in names:
             info = AsyncServiceInfo("_hue._tcp.local.", name)
             if await info.async_request(azc.zeroconf, 2000):
-                props = {k.decode(): (v.decode() if v else "") for k, v in info.properties.items()}
+                props = {
+                    k.decode(): (v.decode() if v else "")
+                    for k, v in info.properties.items()
+                }
                 addrs = info.parsed_addresses()
                 if addrs:
                     bid = props.get("bridgeid", name).upper()
-                    found[bid] = {"id": bid, "host": addrs[0], "name": name.split(".")[0],
-                                  "model": props.get("modelid")}
+                    found[bid] = {
+                        "id": bid,
+                        "host": addrs[0],
+                        "name": name.split(".")[0],
+                        "model": props.get("modelid"),
+                    }
         await browser.async_cancel()
         if own_zc:
             await azc.async_close()
@@ -67,7 +81,12 @@ async def discover(azc=None, timeout: float = 3.0) -> list[dict]:
 
 
 class HueBridge:
-    def __init__(self, host: str, app_key: str | None = None, http: httpx.AsyncClient | None = None):
+    def __init__(
+        self,
+        host: str,
+        app_key: str | None = None,
+        http: httpx.AsyncClient | None = None,
+    ):
         """`http` must skip certificate verification; without it a private client is created."""
         self.host = host
         self.app_key = app_key
@@ -88,14 +107,21 @@ class HueBridge:
         r.raise_for_status()
         return r.json()
 
-    async def pair(self, app_name: str = "ha_hue_entertainment#core") -> tuple[str, str]:
+    async def pair(
+        self, app_name: str = "ha_hue_entertainment#core"
+    ) -> tuple[str, str]:
         """Create an app key + streaming client key. Needs the link button pressed."""
-        r = await self._http.post(f"{self._base}/api", json={"devicetype": app_name, "generateclientkey": True})
+        r = await self._http.post(
+            f"{self._base}/api",
+            json={"devicetype": app_name, "generateclientkey": True},
+        )
         r.raise_for_status()
         result = r.json()[0]
         if "error" in result:
             if result["error"].get("type") == 101:
-                raise LinkButtonNotPressed("Press the link button on the bridge, then try again within 30 s.")
+                raise LinkButtonNotPressed(
+                    "Press the link button on the bridge, then try again within 30 s."
+                )
             raise BridgeError(result["error"].get("description", "pairing failed"))
         return result["success"]["username"], result["success"]["clientkey"]
 
@@ -103,17 +129,24 @@ class HueBridge:
         if not self.app_key:
             raise BridgeError("Not paired")
         r = await self._http.request(
-            method, f"{self._base}/clip/v2/resource/{resource}",
-            headers={"hue-application-key": self.app_key}, json=json,
+            method,
+            f"{self._base}/clip/v2/resource/{resource}",
+            headers={"hue-application-key": self.app_key},
+            json=json,
         )
         if r.status_code in (401, 403):  # the bridge answers with an HTML page here
             raise AuthError("The bridge rejected the app key; pair again")
         try:
             body = r.json() if r.content else {}
-        except ValueError:
-            raise BridgeError(f"{method} {resource}: {r.status_code} unexpected response")
+        except ValueError as err:
+            raise BridgeError(
+                f"{method} {resource}: {r.status_code} unexpected response"
+            ) from err
         if r.status_code >= 400 or body.get("errors"):
-            msgs = "; ".join(e.get("description", "") for e in body.get("errors", [])) or r.text
+            msgs = (
+                "; ".join(e.get("description", "") for e in body.get("errors", []))
+                or r.text
+            )
             raise BridgeError(f"{method} {resource}: {r.status_code} {msgs}")
         return body.get("data", [])
 
@@ -139,7 +172,9 @@ class HueBridge:
                 name = ent_owner.get(m["service"]["rid"], "?")
                 idx = m.get("index", 0)
                 names.append(f"{name} #{idx + 1}" if _multi_segment(cfg, m) else name)
-            channels.append({"id": ch["channel_id"], "position": ch["position"], "lights": names})
+            channels.append(
+                {"id": ch["channel_id"], "position": ch["position"], "lights": names}
+            )
         return {
             "id": cfg["id"],
             "name": cfg["metadata"]["name"],
@@ -149,8 +184,11 @@ class HueBridge:
         }
 
     async def set_streaming(self, zone_id: str, active: bool) -> None:
-        await self._request("PUT", f"entertainment_configuration/{zone_id}",
-                            json={"action": "start" if active else "stop"})
+        await self._request(
+            "PUT",
+            f"entertainment_configuration/{zone_id}",
+            json={"action": "start" if active else "stop"},
+        )
 
     async def zone_status(self, zone_id: str) -> str:
         """'active' or 'inactive'."""
@@ -159,7 +197,11 @@ class HueBridge:
 
     async def active_streams(self) -> list[dict]:
         """Areas being streamed right now: [{"id", "name", "app"}]."""
-        active = [c for c in await self.entertainment_configurations() if c.get("status") == "active"]
+        active = [
+            c
+            for c in await self.entertainment_configurations()
+            if c.get("status") == "active"
+        ]
         if not active:
             return []
         apps = {}
@@ -168,11 +210,16 @@ class HueBridge:
             apps = r.json().get("whitelist", {})
         except Exception:
             pass
-        return [{
-            "id": c["id"],
-            "name": c["metadata"]["name"],
-            "app": apps.get((c.get("active_streamer") or {}).get("rid"), {}).get("name", "another app").split("#")[0],
-        } for c in active]
+        return [
+            {
+                "id": c["id"],
+                "name": c["metadata"]["name"],
+                "app": apps.get((c.get("active_streamer") or {}).get("rid"), {})
+                .get("name", "another app")
+                .split("#")[0],
+            }
+            for c in active
+        ]
 
     async def stream_holder(self) -> str | None:
         """Describe who is streaming right now, e.g. "'TV' by HueSyncBox", or None."""
@@ -183,5 +230,12 @@ class HueBridge:
 def _multi_segment(cfg: dict, member: dict) -> bool:
     """True when the same light service appears in several channels (gradient lights)."""
     rid = member["service"]["rid"]
-    return sum(1 for ch in cfg.get("channels", []) for m in ch.get("members", [])
-               if m["service"]["rid"] == rid) > 1
+    return (
+        sum(
+            1
+            for ch in cfg.get("channels", [])
+            for m in ch.get("members", [])
+            if m["service"]["rid"] == rid
+        )
+        > 1
+    )
