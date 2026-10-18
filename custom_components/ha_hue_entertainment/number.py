@@ -42,5 +42,4 @@ class SceneSpeed(HueEntertainmentEntity, RestoreNumber):
         return self.engine.speed
 
     async def async_set_native_value(self, value: float) -> None:
-        self.engine.speed = value
-        self.async_write_ha_state()
+        await self.engine.set_speed(value)

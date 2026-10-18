@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.httpx_client import get_async_client
 
@@ -33,6 +34,16 @@ BUILTIN_SCENES = Path(__file__).parent / "scenes"
 type HueEntertainmentConfigEntry = ConfigEntry[HueSyncEngine]
 
 PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SWITCH]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Register the WebSocket commands once, for all bridges."""
+    from . import websocket_api
+
+    websocket_api.async_register(hass)
+    return True
 
 
 async def async_setup_entry(
@@ -92,6 +103,16 @@ async def async_setup_entry(
     entry.runtime_data = engine
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def async_set_allow_override(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, allow: bool
+) -> None:
+    """Change the allow-override setting and keep it in the entry's options."""
+    await entry.runtime_data.set_allow_override(allow)
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_ALLOW_OVERRIDE: allow}
+    )
 
 
 def _load_scenes(user_dir: Path) -> dict[str, Scene]:

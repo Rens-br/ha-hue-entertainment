@@ -462,6 +462,16 @@ class HueSyncEngine:
         self._render_at = None
         await self._notify()
 
+    async def set_speed(self, speed: float) -> None:
+        if not 0 < speed <= 10:
+            raise ValueError("speed must be between 0 and 10")
+        self.speed = speed
+        await self._notify()
+
+    async def set_allow_override(self, allow: bool) -> None:
+        self.allow_override = allow
+        await self._notify()
+
     async def stop_scene(self) -> None:
         """Stop the scene; the lights keep its last frame."""
         if self.scene_run:
@@ -538,8 +548,18 @@ class HueSyncEngine:
             self._cmd_count, self._cmd_window = 0, now
 
     def colors(self) -> dict:
+        """What the lights show now: the frame with live overlays on top."""
+        now = time.monotonic()
+        frame = {
+            **self.frame,
+            **{
+                ch: o[0]
+                for ch, o in self.overlays.items()
+                if ch in self.frame and (o[1] is None or o[1] > now)
+            },
+        }
         return {
-            "channels": {str(ch): to_hex(c) for ch, c in sorted(self.frame.items())},
+            "channels": {str(ch): to_hex(c) for ch, c in sorted(frame.items())},
             "brightness": self.brightness,
             "version": self.frame_version,
         }
@@ -577,6 +597,7 @@ class HueSyncEngine:
                 "speed": self.speed,
                 "overlays": len(self.overlays),
             },
+            "allow_override": self.allow_override,
             "commands_per_sec": round(self.command_rate, 1),
         }
 
@@ -589,6 +610,10 @@ class HueSyncEngine:
         """Call `callback()` (sync or async) on every status change. Returns a remove function."""
         self._listeners.append(callback)
         return lambda: self._listeners.remove(callback)
+
+    async def notify_changed(self) -> None:
+        """Tell listeners about a change made outside the engine's own methods."""
+        await self._notify()
 
     async def _notify(self):
         for callback in list(self._listeners):

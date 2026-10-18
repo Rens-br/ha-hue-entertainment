@@ -6,6 +6,7 @@
   ],
   "config_flow": true,
   "dependencies": [
+    "websocket_api",
     "zeroconf"
   ],
   "documentation": "https://github.com/Rens-br/ha-hue-entertainment",

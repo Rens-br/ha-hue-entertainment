@@ -9,8 +9,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import HueEntertainmentConfigEntry
-from .const import CONF_ALLOW_OVERRIDE
+from . import HueEntertainmentConfigEntry, async_set_allow_override
 from .entity import HueEntertainmentEntity
 
 
@@ -37,14 +36,7 @@ class AllowOverrideSwitch(HueEntertainmentEntity, SwitchEntity):
         return self.engine.allow_override
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        self._set(True)
+        await async_set_allow_override(self.hass, self._entry, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        self._set(False)
-
-    def _set(self, value: bool) -> None:
-        self.engine.allow_override = value
-        self.hass.config_entries.async_update_entry(
-            self._entry, options={**self._entry.options, CONF_ALLOW_OVERRIDE: value}
-        )
-        self.async_write_ha_state()
+        await async_set_allow_override(self.hass, self._entry, False)
