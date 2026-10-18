@@ -1,8 +1,18 @@
-"""WebSocket commands for the panel and for builders (admin only).
+"""WebSocket commands for the panel and for live control clients.
+
+Anything that changes the setup (area, sync, scenes, override, ...) is admin-only.
+Live control (claim, frame, release) and reading state (status, subscribe) work
+for any logged-in user, so an external client can use a token of a dedicated
+non-admin user instead of an admin token.
 
 All commands take an optional entry_id; with one bridge it can be left out.
 The subscription pushes {"type": "status", ...} on every change and
 {"type": "colors", ...} (what the lights show) up to 20 times a second.
+
+Live control: live/claim is a subscription that holds control while open. It
+sends {"type": "claimed", "client_id", "zone"} and, if something else takes
+over, {"type": "control_lost", "reason"}. Frames go through live/frame with the
+client_id. Closing the subscription (or disconnecting) releases control.
 """
 
 from __future__ import annotations
@@ -38,6 +48,10 @@ def async_register(hass: HomeAssistant) -> None:
         ws_speed,
         ws_set_colors,
         ws_subscribe,
+        ws_live_claim,
+        ws_live_frame,
+        ws_live_release,
+        ws_live_revoke,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -59,25 +73,31 @@ def _snapshot(engine: HueSyncEngine) -> dict[str, Any]:
     return {**engine.status(), "zone_layout": engine.zone}
 
 
-def _handler(func):
-    """Admin-only async command; engine errors become clean error replies."""
+def _command(admin: bool):
+    """Async command; engine errors become clean error replies."""
 
-    @websocket_api.require_admin
-    @websocket_api.async_response
-    async def wrapper(hass, connection, msg):
-        try:
-            result = await func(hass, _engine(hass, msg), msg)
-        except (BridgeError, SceneError, ValueError) as err:
-            connection.send_error(msg["id"], "failed", str(err))
-            return
-        connection.send_result(msg["id"], result)
+    def decorate(func):
+        @websocket_api.async_response
+        async def wrapper(hass, connection, msg):
+            try:
+                result = await func(hass, _engine(hass, msg), msg)
+            except (BridgeError, SceneError, ValueError) as err:
+                connection.send_error(msg["id"], "failed", str(err))
+                return
+            connection.send_result(msg["id"], result)
 
-    wrapper.__name__ = func.__name__
-    return wrapper
+        wrapper.__name__ = func.__name__
+        return websocket_api.require_admin(wrapper) if admin else wrapper
+
+    return decorate
+
+
+_handler = _command(admin=True)  # changes the setup: admins only
+_user = _command(admin=False)  # live control and reading state: any logged-in user
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/status", **ENTRY})
-@_handler
+@_user
 async def ws_status(hass, engine, msg):
     return _snapshot(engine)
 
@@ -224,7 +244,6 @@ async def ws_set_colors(hass, engine, msg):
         **ENTRY,
     }
 )
-@websocket_api.require_admin
 @callback
 def ws_subscribe(hass: HomeAssistant, connection, msg: dict) -> None:
     try:
@@ -271,3 +290,96 @@ def ws_subscribe(hass: HomeAssistant, connection, msg: dict) -> None:
     send_status()
     if msg["colors"]:
         send_colors()
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/claim",
+        vol.Required("name"): str,
+        vol.Optional("start", default=True): bool,
+        **ENTRY,
+    }
+)
+@websocket_api.async_response
+async def ws_live_claim(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Hold live control while this subscription is open."""
+    try:
+        engine = _engine(hass, msg)
+    except BridgeError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+
+    @callback
+    def on_lost(reason: str) -> None:
+        connection.send_message(
+            websocket_api.event_message(
+                msg["id"], {"type": "control_lost", "reason": reason}
+            )
+        )
+
+    try:
+        client_id = await engine.claim_live(msg["name"], on_lost)
+        if msg["start"] and not engine.want_fps:
+            await engine.start_stream()
+    except (BridgeError, ValueError) as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+
+    @callback
+    def release() -> None:
+        hass.async_create_task(engine.release_live(client_id))
+
+    connection.subscriptions[msg["id"]] = release
+    connection.send_result(msg["id"])
+    connection.send_message(
+        websocket_api.event_message(
+            msg["id"], {"type": "claimed", "client_id": client_id, "zone": engine.zone}
+        )
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/frame",
+        vol.Required("client_id"): str,
+        vol.Optional("channels"): {vol.Coerce(int): COLOR},
+        vol.Optional("all"): COLOR,
+        vol.Optional("brightness"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        **ENTRY,
+    }
+)
+@_user
+async def ws_live_frame(hass, engine, msg):
+    engine.live_frame(
+        msg["client_id"],
+        channels={str(ch): c for ch, c in msg.get("channels", {}).items()},
+        all=msg.get("all"),
+        brightness=msg.get("brightness"),
+    )
+    return None
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/release",
+        vol.Required("client_id"): str,
+        **ENTRY,
+    }
+)
+@_user
+async def ws_live_release(hass, engine, msg):
+    await engine.release_live(msg["client_id"])
+    return _snapshot(engine)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/live/revoke",
+        vol.Optional("reason", default="taken over from the panel"): str,
+        **ENTRY,
+    }
+)
+@_handler
+async def ws_live_revoke(hass, engine, msg):
+    await engine.revoke_live(msg["reason"])
+    return _snapshot(engine)

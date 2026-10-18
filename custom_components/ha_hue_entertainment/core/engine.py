@@ -12,6 +12,7 @@ from collections.abc import Callable
 import inspect
 import logging
 import time
+import uuid
 
 import httpx
 
@@ -74,6 +75,9 @@ class HueSyncEngine:
         ] = {}  # ch -> (colour, expires at)
         self._render_at: float | None = None
         self._scene_ended = False
+        # Live control: one external client drives the frames. Newest wins; the
+        # previous holder is told why through its on_lost callback.
+        self.live: dict | None = None  # {"id", "name", "since", "on_lost"}
         self.frame_version = 0  # bumps on every colour change
         self.command_rate = 0.0
         self._cmd_count = 0
@@ -222,6 +226,7 @@ class HueSyncEngine:
             if self.zone and self.zone["id"] == zone_id:
                 return self.zone
             fps = self.want_fps
+            self._lose_live("the entertainment area was changed")
             if fps:
                 await self._close_stream()  # stops the old area on the bridge
             await self._load_zone(zone_id)
@@ -283,6 +288,7 @@ class HueSyncEngine:
         await self._notify()
 
     async def stop_stream(self):
+        self._lose_live("sync was stopped")
         async with self._lock:
             self.want_fps = None
             await self._close_stream()
@@ -359,6 +365,7 @@ class HueSyncEngine:
             holder = await self._call(lambda b: b.stream_holder())
         except BridgeError:
             holder = None
+        self._lose_live(f"{holder or 'another app'} took over the bridge")
         self.want_fps = None
         self.stream_state = "off"
         self.last_error = (
@@ -459,9 +466,60 @@ class HueSyncEngine:
             raise BridgeError("Select an entertainment zone first")
         if scene_id not in self.scenes:
             raise ValueError(f"unknown scene {scene_id!r}")
-        self.scene_run = SceneRun(self.scenes[scene_id], self._positions(), params)
+        run = SceneRun(self.scenes[scene_id], self._positions(), params)
+        self._lose_live(f"scene {self.scenes[scene_id].name!r} was started")
+        self.scene_run = run
         self._render_at = None
         await self._notify()
+
+    # ---- live control ------------------------------------------------------
+
+    async def claim_live(self, name: str, on_lost) -> str:
+        """Take control for an external client; returns its id. A running scene
+        stops; a previous holder gets on_lost(reason). on_lost must be sync."""
+        if not self.zone:
+            raise BridgeError("Select an entertainment zone first")
+        self._lose_live(f"{name!r} claimed control")
+        self.scene_run = None
+        self.live = {
+            "id": uuid.uuid4().hex,
+            "name": name,
+            "since": time.time(),
+            "on_lost": on_lost,
+        }
+        log.info("Live control claimed by %s", name)
+        await self._notify()
+        return self.live["id"]
+
+    async def release_live(self, client_id: str) -> None:
+        """Give control back. The lights keep the last frame."""
+        if self.live and self.live["id"] == client_id:
+            log.info("Live control released by %s", self.live["name"])
+            self.live = None
+            await self._notify()
+
+    async def revoke_live(self, reason: str) -> None:
+        """Take control away from the current client (e.g. "Take over" in the panel)."""
+        if self.live:
+            self._lose_live(reason)
+            await self._notify()
+
+    def live_frame(
+        self, client_id: str, channels=None, all=None, brightness=None
+    ) -> None:
+        """Set colours as the live client; refused for anyone else."""
+        if not self.live or self.live["id"] != client_id:
+            raise BridgeError("Not in control; claim live control first")
+        self.set_colors(channels, all, brightness, _live=True)
+
+    def _lose_live(self, reason: str) -> None:
+        holder, self.live = self.live, None
+        if holder:
+            log.info("Live control of %s ended: %s", holder["name"], reason)
+            try:
+                holder["on_lost"](reason)
+            except Exception:  # a broken client must not break the engine
+                log.exception("live control on_lost callback failed")
 
     async def set_speed(self, speed: float) -> None:
         if not 0 < speed <= 10:
@@ -493,6 +551,7 @@ class HueSyncEngine:
         overlay: bool = False,
         duration: float | None = None,
         clear_overlay: bool = False,
+        _live: bool = False,
     ):
         """Update the frame. Unlisted channels keep their colour.
 
@@ -525,6 +584,8 @@ class HueSyncEngine:
             return
         if channels or all is not None:
             self.scene_run = None  # explicit colours replace the scene
+            if not _live:
+                self._lose_live("colours were set")
         new = dict(self.frame)
         if all is not None:
             c = parse_color(all)
@@ -599,6 +660,9 @@ class HueSyncEngine:
                 "speed": self.speed,
                 "overlays": len(self.overlays),
             },
+            "live": {"client": self.live["name"], "since": self.live["since"]}
+            if self.live
+            else None,
             "allow_override": self.allow_override,
             "commands_per_sec": round(self.command_rate, 1),
         }

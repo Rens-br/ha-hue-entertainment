@@ -117,12 +117,15 @@ class HueEntertainmentPanel extends LitElement {
   private renderStatePill() {
     const st = this.status?.streaming;
     if (!st) return nothing;
+    const live = this.status?.live;
     const label =
-      st.state === "streaming"
-        ? `Streaming · ${Math.round(st.send_fps)}/s`
-        : st.state === "reconnecting"
-          ? "Reconnecting"
-          : "Off";
+      st.state === "streaming" && live
+        ? `Live · ${live.client}`
+        : st.state === "streaming"
+          ? `Streaming · ${Math.round(st.send_fps)}/s`
+          : st.state === "reconnecting"
+            ? "Reconnecting"
+            : "Off";
     return html`<span class="pill ${st.state}">${label}</span>`;
   }
 
@@ -246,7 +249,8 @@ class HueEntertainmentPanel extends LitElement {
               channels: Object.fromEntries(
                 e.detail.channels.map((id) => [id, this.paintColor]),
               ),
-              overlay: s.scene.id !== null, // keep a running scene going around it
+              // draw on top of a running scene or live control instead of replacing it
+              overlay: s.scene.id !== null || s.live !== null,
             })}
         ></hue-room-preview>
         <div class="row controls">
@@ -307,9 +311,25 @@ class HueEntertainmentPanel extends LitElement {
   }
 
   private renderMessage() {
+    const live = this.status?.live;
     const text = this.message ?? this.status?.streaming.error;
-    if (!text) return nothing;
-    return html`<div class="message" role="alert">${text}</div>`;
+    return html`
+      ${
+        live
+          ? html`<div class="info">
+              <span
+                >Live control by <b>${live.client}</b> since
+                ${new Date(live.since * 1000).toLocaleTimeString()}. Painting draws on
+                top.</span
+              >
+              <button ?disabled=${this.busy} @click=${() => this.act("live/revoke")}>
+                Take over
+              </button>
+            </div>`
+          : nothing
+      }
+      ${text ? html`<div class="message" role="alert">${text}</div>` : nothing}
+    `;
   }
 
   static styles = css`
@@ -455,6 +475,26 @@ class HueEntertainmentPanel extends LitElement {
     }
     input[type="range"] {
       accent-color: var(--primary-color);
+    }
+    .info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(3, 169, 244, 0.12);
+      border: 1px solid var(--info-color, #039be5);
+    }
+    .info button {
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--primary-color);
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+      cursor: pointer;
     }
     .message {
       padding: 10px 14px;

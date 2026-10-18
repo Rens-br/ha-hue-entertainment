@@ -59,6 +59,7 @@ export interface Status {
     speed: number;
     overlays: number;
   };
+  live: { client: string; since: number } | null; // external live control client
   allow_override: boolean;
 }
 

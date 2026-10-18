@@ -8,7 +8,7 @@ Anyone can install it from HACS (as a custom repository for now). It adds an
 admin-only sidebar item that opens a full-screen panel, like WashData, where the
 user connects a Hue bridge, picks an entertainment zone, turns sync on and off,
 and plays position-based animated scenes. The same controls are available to
-the rest of Home Assistant as entities and services. Builders get a realtime
+the rest of Home Assistant as entities and services. Live control clients get a realtime
 interface for their own effects.
 
 ## Decisions
@@ -29,7 +29,7 @@ interface for their own effects.
 | 13 | Scenes storage | Built-in scenes ship with the integration; user scenes are JSON files in `/config/ha_hue_entertainment/scenes/`, read at startup and reload. A user scene with the same id replaces the built-in. Import/export actions and URL import later |
 | 19 | Overlay | `set_colors` with `overlay: true` draws the given channels on top of a running scene (solid colour), optionally for a `duration`; without overlay, colours replace the scene |
 | 14 | Later | Restart behaviour, multiple bridges, reuse of HA's Hue integration, scene editor |
-| 7 | Builder socket | Home Assistant WebSocket API by default; UDP (DDP/E1.31) as a possible later opt-in |
+| 7 | Live control | Home Assistant WebSocket API by default; UDP (DDP/E1.31) as a possible later opt-in |
 | 18 | Multiple sources | One source at a time; newest wins, the previous one is told it lost control |
 | 17 | Panel access | Admins only |
 | 15 | Frontend | Home Assistant default: Lit web components |
@@ -68,7 +68,7 @@ Per entertainment zone (one device per bridge, zones as its entities):
 - `sensor` **Stream state**: off / streaming / reconnecting / busy, with attributes for who holds the bridge
 - Services: `play_scene` (scene + parameters), `stop_scene`, `set_colors`, `import_scene`, `export_scene`
 
-### Builder interface
+### Live control
 
 What others do:
 - **Home Assistant WebSocket API.** Integrations add custom commands, and
@@ -146,11 +146,22 @@ added later as an opt-in for compatibility with existing light-show software.
 - [x] Load user scenes from `/config/ha_hue_entertainment/scenes/` (created on setup); invalid files logged
 - [x] Overlay (decision 19): `overlay`, `duration` and `clear_overlay` on set_colors
 - [ ] Later: import / export actions
+- [ ] Later: brightness from a scene layer: a "multiply" blend so a second layer (e.g. noise)
+      varies the brightness per light on top of the colour layers; the area brightness
+      setting stays the maximum
+- [ ] Later: `play_scene` transition: fade from what the lights show into the new scene
+      over a given time instead of cutting to it
 
-### 6. Builder interface
-- [ ] WebSocket commands: get zone layout, claim control, send frames, release
-- [ ] "Newest wins": a new claim takes over; the previous client gets a `control_lost` event
+### 6. Live control
+- [x] WebSocket commands: claim (a subscription that holds control and sends the zone layout),
+      frame, release, revoke; disconnecting releases
+- [x] "Newest wins": a new claim, a scene, explicit colours, stopping sync or changing the area
+      takes over and the previous client gets `control_lost` with the reason; the client decides
+      what to do next. Overlays and brightness don't take control. No timeout. Lights keep the
+      last frame after release
+- [x] Panel: "Live · client" state, info bar with Take over; painting draws on top
 - [ ] Documentation and a small example client
+- [ ] Later: the same in the standalone server
 
 ### 7. Hardening and release
 - [ ] Watchdog/recovery (already built), diagnostics download, repair issues in HA
@@ -203,10 +214,10 @@ added later as an opt-in for compatibility with existing light-show software.
 - As an automation author, I start/stop sync, select the zone and play/stop scenes from automations and scripts.
 - As an automation author, I trigger on stream state (for example when the Sync Box takes over).
 
-**Builder**
-- As a builder, I connect to Home Assistant's WebSocket with a token and stream per-light colours.
-- As a builder, I read the zone layout (channel ids, positions, light names) to make position-based effects.
-- As a builder, I know when another source takes control from me.
+**Live control client**
+- As a developer, I connect to Home Assistant's WebSocket with a token and stream per-light colours.
+- As a developer, I read the zone layout (channel ids, positions, light names) to make position-based effects.
+- As a developer, I know when another source takes control from me.
 
 **Scene creator / sharer**
 - As a scene creator, I write a JSON scene once and it adapts to any room, because it uses positions.

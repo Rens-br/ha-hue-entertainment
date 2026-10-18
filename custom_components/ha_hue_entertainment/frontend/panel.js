@@ -1323,8 +1323,8 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 	renderStatePill() {
 		let e = this.status?.streaming;
 		if (!e) return z;
-		let t = e.state === "streaming" ? `Streaming · ${Math.round(e.send_fps)}/s` : e.state === "reconnecting" ? "Reconnecting" : "Off";
-		return I`<span class="pill ${e.state}">${t}</span>`;
+		let t = this.status?.live, n = e.state === "streaming" && t ? `Live · ${t.client}` : e.state === "streaming" ? `Streaming · ${Math.round(e.send_fps)}/s` : e.state === "reconnecting" ? "Reconnecting" : "Off";
+		return I`<span class="pill ${e.state}">${n}</span>`;
 	}
 	renderBridge() {
 		let e = this.status.bridge;
@@ -1409,7 +1409,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
           ?active=${t}
           @paint=${(t) => this.act("colors/set", {
 			channels: Object.fromEntries(t.detail.channels.map((e) => [e, this.paintColor])),
-			overlay: e.scene.id !== null
+			overlay: e.scene.id !== null || e.live !== null
 		})}
         ></hue-room-preview>
         <div class="row controls">
@@ -1463,8 +1463,20 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
     `;
 	}
 	renderMessage() {
-		let e = this.message ?? this.status?.streaming.error;
-		return e ? I`<div class="message" role="alert">${e}</div>` : z;
+		let e = this.status?.live, t = this.message ?? this.status?.streaming.error;
+		return I`
+      ${e ? I`<div class="info">
+              <span
+                >Live control by <b>${e.client}</b> since
+                ${(/* @__PURE__ */ new Date(e.since * 1e3)).toLocaleTimeString()}. Painting draws on
+                top.</span
+              >
+              <button ?disabled=${this.busy} @click=${() => this.act("live/revoke")}>
+                Take over
+              </button>
+            </div>` : z}
+      ${t ? I`<div class="message" role="alert">${t}</div>` : z}
+    `;
 	}
 	static {
 		this.styles = o`
@@ -1610,6 +1622,26 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
     }
     input[type="range"] {
       accent-color: var(--primary-color);
+    }
+    .info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(3, 169, 244, 0.12);
+      border: 1px solid var(--info-color, #039be5);
+    }
+    .info button {
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--primary-color);
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+      cursor: pointer;
     }
     .message {
       padding: 10px 14px;
