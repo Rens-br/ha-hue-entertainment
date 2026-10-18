@@ -1,5 +1,9 @@
 # Local state: bridge address and pairing keys
 data/
+
+# Local planning notes
+docs/PLAN.md
+TODO.md
 *.json.tmp
 
 # Debug app and client library (kept local, not part of the server)

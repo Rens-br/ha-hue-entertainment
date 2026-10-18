@@ -1,145 +1,278 @@
 # Hue Entertainment for Home Assistant
 
-Stream colours and position-based animations to a Philips Hue **entertainment
-area** through the Hue Entertainment API (a DTLS stream to the bridge), instead
-of ordinary per-light commands. Colour updates are sent ~50 times a second and
-the bridge pushes about 25 updates per second to the lights, far faster than
-normal light commands (about 10 per second per bridge).
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
+[![Validate](https://github.com/Rens-br/ha-hue-entertainment/actions/workflows/validate.yml/badge.svg)](https://github.com/Rens-br/ha-hue-entertainment/actions/workflows/validate.yml)
+[![License](https://img.shields.io/github/license/Rens-br/ha-hue-entertainment)](LICENSE)
 
-> **Status: early development.** The Home Assistant integration is a skeleton;
-> the standalone server below works. See [docs/PLAN.md](docs/PLAN.md).
+Drive a Philips Hue **entertainment area** from Home Assistant: colours,
+animated scenes that move through the room, and live control from your own
+programs using the fast stream the Hue Sync apps use: about 50 updates a second to the bridge, which updates the lights about 25 times a second.
 
-## Install in Home Assistant (HACS custom repository)
+> **AI Notice:**
+This integration is largely coded by AI but with supervision and my own coding here and there, because I mainly intended it for my own use. If there is enough interest in this project I will dedicate more of my time to it.
 
-1. HACS → ⋮ → Custom repositories → add this repository's URL, category **Integration**.
-2. Install **Hue Entertainment** and restart Home Assistant.
+## What you get
+- **Home Assistant entities** an Entertainment light (with the scenes as effects), the area, scene speed and an allow-override setting.
+- **A sidebar panel** to pick the entertainment area, turn sync on and off, see a live 3D-style view of the room with every light in its place and colour, paint lights, and play scenes with their own settings.
+- **Animated scenes** that use where your lights are: a sweep across the room, aurora curtains, a thunderstorm with lightning that rolls through the room.
+Write your own as JSON files.
+- **Actions** for automations: set colours per light (or draw an overlay on top of a running scene, for example as a notification), play and stop scenes.
+- **Live control** for your own programs (visualisers, games, training apps) over Home Assistant's WebSocket.
+- **Plays nicely with a Hue Sync Box**: starting while another app syncs gives a clear "busy" message, and when another app takes over, sync turns off instead of fighting back. Optionally allow taking over.
 
-Setup (bridge pairing, zones, sync, scenes) is not available yet.
+## Planned features
+The following features are currently planned to be added, but might change in the future:
+- **Custom light positioning:** Allowing to change the light positions from the panel, to be able to place them better, and enable more support for non-square rooms.
+- **Non-entertainment zone lights:** Allowing to add lights that are not in the entertainment zone, while they would be more restricted. (using normal light commands, which the bridge limits to about 10 updates a second)
+- **Additional scene features:** Brightness layers to control brightness from noise.
+- **Scene transitions**: fade into a new scene instead of switching instantly.
+- **Import and export** of scene files from the panel, later I want to make it easier to find and share scenes. 
+- **Multiple bridges** Allowing to add multiple bridges, allowing for larger entertainment zones if possible.
 
-## Standalone server
+## Requirements
 
-Runs outside Home Assistant and exposes an HTTP/WebSocket API on localhost.
+- A Philips Hue bridge with at least one **entertainment area**, created in the Hue app under Settings, Entertainment areas. The area also sets where each light is in the room.
+- Home Assistant. Developed and tested on **2026.10** (Home Assistant OS).
+- Home Assistant and the bridge on the same network.
 
+## Installation
+
+### HACS (recommended)
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Rens-br&repository=ha-hue-entertainment&category=integration)
+
+Or by hand:
+
+1. In HACS, open the menu (⋮), **Custom repositories**, add
+   `https://github.com/Rens-br/ha-hue-entertainment` with type **Integration**.
+2. Search for **Hue Entertainment** and download it.
+3. Restart Home Assistant.
+
+### Manual
+
+1. Copy `custom_components/ha_hue_entertainment` into your Home Assistant
+   `config/custom_components/` folder.
+2. Restart Home Assistant.
+
+## Configuration
+
+[![Open your Home Assistant instance and start setting up Hue Entertainment.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ha_hue_entertainment)
+
+1. Go to **Settings, Devices and services**. Your bridge usually shows up as a discovered **Hue Entertainment** card; otherwise use **Add integration** and search for it. If the bridge isn't found, enter its IP address.
+2. Press the round **link button** on the bridge and select **Submit** within 30 seconds.
+3. Open **Hue Entertainment** in the sidebar (admins only) and pick your entertainment area.
+
+This integration pairs with the bridge separately from Home Assistant's built-in
+Hue integration; both can be used side by side.
+
+## The panel
+![panel](<docs/images/panel.png>)
+
+- **Sync** and **Allow override** toggles.
+- **Room view**: the area like in the Hue app, with each light on a pole at its height and gradient lights as bars, coloured live. Pick a colour and select a light (or a part of a gradient light) to paint it; set the overall brightness.
+- **Scenes**: play and stop, speed, and a settings form for the selected scene.
+
+## Entities
+
+Per bridge (entity ids depend on your bridge's name):
+
+| Entity | What it does |
+|---|---|
+| `light.<bridge>_entertainment` | On: sync on, showing its colour or scene. Off: sync off, the lights return to how they were. Colour and brightness apply to the whole area. Scenes are its **effects**. The `channels` attribute lists each channel id and its light. |
+| `select.<bridge>_entertainment_zone` | The entertainment area to use. Switching while syncing moves the stream. |
+| `number.<bridge>_scene_speed` | Speed of the playing scene (0.1 to 4×). |
+| `switch.<bridge>_allow_override` | Configuration: let starting sync stop another app’s stream, such as a Hue Sync Box. Off by default. |
+
+While syncing, the bridge reserves the area's lights for the stream; the Hue
+app, scenes and Home Assistant's Hue integration can't change them until sync
+stops. When sync stops, the bridge puts them back as they were.
+
+## Actions
+
+### `ha_hue_entertainment.set_colors`
+
+Set colours per channel and/or for the whole area. Starts sync if it's off.
+
+| Field | Description |
+|---|---|
+| `channels` | Colour per channel id (see the light's `channels` attribute). Channels not listed keep their colour. |
+| `all` | One colour for every channel, applied before `channels`. |
+| `brightness_pct` | Brightness of the whole area, 0 to 100. |
+| `overlay` | Draw on top of a running scene or live client instead of replacing it. |
+| `duration` | Remove the overlay after this many seconds. |
+| `clear_overlay` | Remove all overlays first. |
+
+Colours are `[r, g, b]` (0 to 255), `[r, g, b, brightness]` where the 4th value
+(0 to 255) dims that colour, `"#rrggbb"` or `"#rrggbbBB"`.
+
+```yaml
+action: ha_hue_entertainment.set_colors
+target:
+  entity_id: light.pro_bridge_entertainment
+data:
+  all: [255, 120, 0, 60]
+  channels:
+    0: [255, 0, 0]
+    3: "#00ff00"
 ```
-integration ──HTTP/WebSocket──▶ standalone server ──DTLS/UDP 2100──▶ Hue bridge ──▶ lights
-                                  (port 8080)
+
+### `ha_hue_entertainment.play_scene`
+
+Play a scene, optionally with its own settings. Starts sync if it's off.
+
+| Field | Description |
+|---|---|
+| `scene` | Scene id or name, for example `sweep`. |
+| `params` | Scene settings; anything not given keeps its default. |
+| `speed` | Speed, 0.1 to 4. Also sets the Scene speed entity. |
+
+```yaml
+action: ha_hue_entertainment.play_scene
+target:
+  entity_id: light.pro_bridge_entertainment
+data:
+  scene: sweep
+  params:
+    color: "#0050ff"
+    bounce: true
+  speed: 1.5
 ```
 
-### Setup
+The quickest way to play a scene with its default settings is the light's effect:
 
-Python 3.13 (see `.python-version`). DTLS uses OpenSSL through `pyOpenSSL`/`cryptography`,
-which have prebuilt wheels for x86_64 and aarch64 (including Alpine).
-
-```bash
-uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt  # uv reads .python-version
+```yaml
+action: light.turn_on
+target:
+  entity_id: light.pro_bridge_entertainment
+data:
+  effect: Aurora
 ```
 
-### Run
+### `ha_hue_entertainment.stop_scene`
 
-```bash
-./run_server.sh            # API on http://127.0.0.1:8080, docs at /docs
-```
+Stop the scene. The lights keep its last frame and sync stays on; turn the
+Entertainment light off to stop sync.
 
-First time: call `GET /api/v1/bridges/discover`, press the link button on the
-bridge, then call `POST /api/v1/bridge/pair` with its address. Then select a zone
-and start the stream. You can do all of this from the interactive docs at `/docs`.
+## Scenes (animations)
 
-The keys are stored in `data/config.json` with mode 600. Set
-`HUE_ENTERTAINMENT_CONFIG` to use another file, e.g. `/data/config.json` in a
-Home Assistant add-on. Entertainment zones are created in the Hue app under
-Settings → Entertainment areas.
+> **Further development**: the scenes feature is very basic allowing for some animated scenes already, but is one of the areas I want to focus on most when the base is solid, allowing for even more advanced effects.
 
-While syncing, the bridge reserves those lights for the stream. Normal control
-from the Hue app, Home Assistant or scenes is paused until you stop it.
+There is a couple of built in scenes that are shipped with the integration, these are meant as demo scenes and can change later on: **Sweep** (a band of colour travelling across the room), **Aurora**
+(slow green, teal and violet curtains) and **Thunderstorm** (dark clouds with
+lightning that strikes somewhere and rolls through the room).
 
-A bridge runs one entertainment stream at a time. If another app (for example
-a Hue Sync Box) is streaming, start returns 409 naming the area and app.
+> Some scenes, like Thunderstorm, flash. If anyone is sensitive to flashing light, avoid them.
 
-### Reliability
+**Your own scenes** are JSON files in `config/ha_hue_entertainment/scenes/` (the
+folder is created on setup). They are read at startup and when you reload the
+integration; a scene with the same `id` as a built-in replaces it, and invalid
+files are skipped with the reason in the log.
 
-- **Bridge moved:** if the saved IP stops answering, the server finds the bridge
-  again by its ID via mDNS and saves the new address.
-- **Stream dropped:** once started, a watchdog keeps the stream alive. If the
-  bridge reboots, drops the session or another app takes over, it reconnects
-  with backoff (2 s up to 30 s) until you call stop. `status.streaming.state`
-  is `off`, `streaming` or `reconnecting`, with the last error.
-- **Logs** go to stdout.
-
-### API
-
-| Method | Path | Body | Purpose |
-|---|---|---|---|
-| GET | `/api/v1/status` | | bridge, zone, stream state, rates |
-| GET | `/api/v1/bridges/discover` | | find bridges on the local network (mDNS) |
-| POST | `/api/v1/bridge/pair` | `{"host": "192.168.1.20"}` | pair; returns **428** until the link button is pressed |
-| DELETE | `/api/v1/bridge` | | forget the bridge |
-| GET | `/api/v1/zones` | | list entertainment zones |
-| POST | `/api/v1/zone` | `{"zone_id": "…"}` | select zone (not while streaming) |
-| GET | `/api/v1/zone` | | selected zone: channels, positions (x,y,z in −1..1), light names |
-| POST | `/api/v1/stream/start` | `{"fps": 50}` | start sync (1–60 packets/s to the bridge) |
-| POST | `/api/v1/stream/stop` | | stop sync; lights return to normal control |
-| GET | `/api/v1/colors` | | current frame |
-| PUT | `/api/v1/colors` | see below | set colours |
-| GET | `/api/v1/scenes` | | scenes and their parameters |
-| POST | `/api/v1/scene/play` | `{"scene": "sweep", "params": {…}, "speed": 1}` | play a scene (starts streaming if needed) |
-| POST | `/api/v1/scene/stop` | | stop the scene; lights keep its last frame |
-| WS | `/api/v1/ws` | | high-rate frames + live state |
-
-Colours are `[r, g, b]` in 0–255 or `"#rrggbb"`, with an optional 4th value for
-brightness (0–255, multiplied into the colour; not alpha): `[255, 0, 0, 128]` or
-`"#ff000080"`. Unlisted channels keep their colour, and `all` is applied before
-`channels`:
+A scene has settings (`parameters`) and `layers` that compute each light's
+colour from its position in the room and the time:
 
 ```json
-{"all": [0, 0, 0], "channels": {"0": [255, 0, 0], "3": "#00ff00"}, "brightness": 0.8}
+{
+  "format": 1,
+  "id": "music-flow",
+  "name": "Music flow",
+  "parameters": {
+    "color_1": {"type": "color", "default": "#ff2d95"},
+    "color_2": {"type": "color", "default": "#7b2cff"},
+    "flow": {"type": "number", "default": 0.08, "min": 0.01, "max": 0.5}
+  },
+  "layers": [
+    {"type": "noise", "colors": ["$color_1", "$color_2"], "scale": 1.2, "drift": "$flow"}
+  ]
+}
 ```
 
-Colours replace a running scene. With `"overlay": true` they are drawn on top of
-it instead, optionally for `"duration"` seconds; `"clear_overlay": true` removes
-overlays. Own scenes go in `data/scenes/*.json` (format in
-`custom_components/ha_hue_entertainment/core/scenes.py`); a scene with the same
-id as a built-in replaces it.
+Layer types: `solid`, `gradient`, `band`, `noise` and `flash`, combined with
+`normal`, `add` or `max` blending. The full format is described at the top of
+[`core/scenes.py`](custom_components/ha_hue_entertainment/core/scenes.py), and
+the [built-in scenes](custom_components/ha_hue_entertainment/scenes) are
+examples to start from.
 
-**WebSocket** (`ws://127.0.0.1:8080/api/v1/ws`) messages:
+## External clients
 
-- Client to server:
-  - `{"type": "colors", ...same fields as PUT}`
-  - `{"type": "subscribe", "colors": true}`
-  - `{"type": "ping", "id": 1}`
-- Server to client:
-  - `{"type": "status", ...}` on every change and once a second
-  - `{"type": "colors", "channels": {...}}` at up to 20 Hz, if subscribed
-  - `{"type": "pong"}`
-  - `{"type": "error", "message": ...}`
+Your own programs can claim control and stream colours in real time over Home
+Assistant's WebSocket, using a token of a dedicated non-admin user. See
+[docs/EXTERNAL_CLIENTS.md](docs/EXTERNAL_CLIENTS.md).
 
-Use the WebSocket for anything animated. REST is fine for occasional changes.
-Error codes: 400 bad input, 409 bridge/state problem, 428 press the link button.
+## Automation examples
 
-**Localhost only.** The server has no authentication, so it only listens on
-127.0.0.1. Other devices on your network can't reach it.
+Flash the light next to the front door red for 5 seconds when the doorbell
+rings, on top of whatever is playing:
 
-## Panel development
-
-The sidebar panel is TypeScript + Lit in `frontend/`, built into
-`custom_components/ha_hue_entertainment/frontend/panel.js`. The built file is
-committed, so installing needs no build step.
-
-```bash
-cd frontend && npm ci
-npm run build    # type-check and build panel.js
-npm run lint     # ESLint + Prettier
-npm run format   # fix formatting
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.doorbell
+    to: "on"
+actions:
+  - action: ha_hue_entertainment.set_colors
+    target:
+      entity_id: light.pro_bridge_entertainment
+    data:
+      channels:
+        4: [255, 0, 0]
+      overlay: true
+      duration: 5
 ```
 
-Python code is checked with `ruff check` and `ruff format` (config in `pyproject.toml`).
+Start the thunderstorm when a movie starts after sunset:
 
-## Files
+```yaml
+triggers:
+  - trigger: state
+    entity_id: media_player.living_room_tv
+    to: playing
+conditions:
+  - condition: sun
+    after: sunset
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.pro_bridge_entertainment
+    data:
+      effect: Thunderstorm
+```
 
-- `custom_components/ha_hue_entertainment/core/`: bridge (discovery, pairing, CLIP v2 REST),
-  stream (HueStream v2, DTLS-PSK via pyOpenSSL), engine (state, lifecycle, watchdog, colour buffer).
-  No Home Assistant imports, shared by the integration and the standalone server.
-- `standalone/server.py`: FastAPI HTTP and WebSocket layer for use outside Home Assistant
+## Known limitations
 
-## Licence
+- **One stream per bridge.** While a Hue Sync Box, the Hue Sync app or another app streams, this integration can't (unless **Allow override** is on), and the other way round.
+- **Gradient lights** get as many controllable parts as the bridge gives them channels in the entertainment area, which can be fewer than the light's segments.
+- **Positions** come from the entertainment area in the Hue app; scenes and the room view are only as accurate as that setup.
+
+## Troubleshooting
+
+- **"Bridge is busy: … is syncing"**: another app (often a Hue Sync Box) holds the bridge. Stop it, or turn on **Allow override**.
+- **The bridge isn't found**: make sure Home Assistant and the bridge are on the same network, or enter the bridge's IP address during setup.
+- **Sync turns itself off**: another app took over the bridge, or the area was stopped in the Hue app. The panel shows the reason.
+- **Debug logging**: on the integration's page, select **Enable debug logging**, reproduce the problem, then disable it to download the log. Or in
+  `configuration.yaml`:
+
+  ```yaml
+  logger:
+    logs:
+      custom_components.ha_hue_entertainment: debug
+  ```
+
+Report problems on the [issue tracker](https://github.com/Rens-br/ha-hue-entertainment/issues).
+
+## Development
+
+- `custom_components/ha_hue_entertainment/core/`: bridge (discovery, pairing, CLIP v2), stream (HueStream v2 over DTLS with pyOpenSSL), engine, scenes. No Home Assistant imports, so the [standalone server](docs/STANDALONE.md) uses the same code.
+- The panel is TypeScript + Lit in `frontend/`, built into `custom_components/ha_hue_entertainment/frontend/panel.js` (committed, so installing needs no build step):
+
+  ```bash
+  cd frontend && npm ci
+  npm run build    # type-check and build panel.js
+  npm run lint     # ESLint + Prettier
+  ```
+
+- Python is checked with `ruff check` and `ruff format` (config in `pyproject.toml`). CI runs these, hassfest and the HACS validator.
+
+## License
 
 MIT, see [LICENSE](LICENSE).
