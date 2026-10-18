@@ -11,6 +11,9 @@ client/
 *.pem
 *.key
 
+# Frontend
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -118,6 +118,21 @@ Error codes: 400 bad input, 409 bridge/state problem, 428 press the link button.
 **Localhost only.** The server has no authentication, so it only listens on
 127.0.0.1. Other devices on your network can't reach it.
 
+## Panel development
+
+The sidebar panel is TypeScript + Lit in `frontend/`, built into
+`custom_components/ha_hue_entertainment/frontend/panel.js`. The built file is
+committed, so installing needs no build step.
+
+```bash
+cd frontend && npm ci
+npm run build    # type-check and build panel.js
+npm run lint     # ESLint + Prettier
+npm run format   # fix formatting
+```
+
+Python code is checked with `ruff check` and `ruff format` (config in `pyproject.toml`).
+
 ## Files
 
 - `custom_components/ha_hue_entertainment/core/`: bridge (discovery, pairing, CLIP v2 REST),

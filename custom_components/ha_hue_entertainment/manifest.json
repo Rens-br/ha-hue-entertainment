@@ -6,6 +6,8 @@
   ],
   "config_flow": true,
   "dependencies": [
+    "http",
+    "panel_custom",
     "websocket_api",
     "zeroconf"
   ],

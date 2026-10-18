@@ -130,10 +130,10 @@ added later as an opt-in for compatibility with existing light-show software.
 - [x] Restore the lights' pre-sync state after stopping: the bridge does this itself, nothing to build
 
 ### 4. Sidebar panel (admins only, Lit)
-- [ ] Sidebar item and full-screen panel, built and shipped inside the integration
-- [ ] Bridge: status, pair / re-pair
-- [ ] Zone picker with a top-view preview of the lights by position
-- [ ] Sync toggle, override setting, stream state and errors ("busy: TV by HueSyncBox")
+- [x] Sidebar item and full-screen panel (TypeScript + Lit + Vite, committed panel.js)
+- [x] Bridge card with a link to Devices and services for pairing
+- [ ] Live top-view preview of the lights by position; click to paint
+- [x] Entertainment area picker, Sync and Allow override toggles, state pill, message bar for errors
 - [ ] Scene library: list, preview, play, stop, import, export
 - [ ] Settings: frame rate, default brightness
 

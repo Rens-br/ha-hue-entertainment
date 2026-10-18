@@ -1,0 +1,23 @@
+{
+  "name": "ha-hue-entertainment-panel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "watch": "vite build --watch",
+    "lint": "eslint . && prettier --check src *.ts *.js *.json",
+    "format": "prettier --write src *.ts *.js *.json && eslint --fix ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4"
+  },
+  "dependencies": {
+    "lit": "^3.3.3"
+  }
+}

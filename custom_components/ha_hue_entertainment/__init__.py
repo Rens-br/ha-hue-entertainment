@@ -38,11 +38,33 @@ PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SWITCH]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
+PANEL_FILE = Path(__file__).parent / "frontend" / "panel.js"
+PANEL_URL = f"/{DOMAIN}/panel.js"
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register the WebSocket commands once, for all bridges."""
+    """Register the WebSocket commands and the sidebar panel once, for all bridges."""
+    from homeassistant.components import panel_custom
+    from homeassistant.components.http import StaticPathConfig
+
     from . import websocket_api
 
     websocket_api.async_register(hass)
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(PANEL_URL, str(PANEL_FILE), cache_headers=False)]
+    )
+    # The file's modification time busts browser caches after an update.
+    version = int(await hass.async_add_executor_job(lambda: PANEL_FILE.stat().st_mtime))
+    await panel_custom.async_register_panel(
+        hass,
+        webcomponent_name="ha-hue-entertainment-panel",
+        frontend_url_path="hue-entertainment",
+        sidebar_title="Hue Entertainment",
+        sidebar_icon="mdi:lightbulb-on-outline",
+        module_url=f"{PANEL_URL}?v={version}",
+        require_admin=True,
+        config={},
+    )
     return True
 
 
