@@ -595,6 +595,7 @@ class HueSyncEngine:
             },
             "scene": {
                 "id": self.scene_id,
+                "params": self.scene_run.params if self.scene_run else None,
                 "speed": self.speed,
                 "overlays": len(self.overlays),
             },

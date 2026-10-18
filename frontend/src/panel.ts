@@ -1,7 +1,8 @@
 import { LitElement, css, html, nothing } from "lit";
 
 import "./preview";
-import type { Colors, Hass, Status, Zone } from "./types";
+import "./scenes";
+import type { Colors, Hass, SceneInfo, Status, Zone } from "./types";
 
 const DOMAIN = "ha_hue_entertainment";
 const INTEGRATION_PAGE = `/config/integrations/integration/${DOMAIN}`;
@@ -13,6 +14,7 @@ class HueEntertainmentPanel extends LitElement {
 
   private status?: Status;
   private zones: Zone[] = [];
+  private scenes: SceneInfo[] = [];
   private message?: string; // last failed action, shown until the next success
   private busy = false; // an action is in flight
   private colors: Colors = { channels: {}, brightness: 1 };
@@ -25,6 +27,7 @@ class HueEntertainmentPanel extends LitElement {
     narrow: { type: Boolean },
     status: { state: true },
     zones: { state: true },
+    scenes: { state: true },
     message: { state: true },
     busy: { state: true },
     colors: { state: true },
@@ -55,7 +58,10 @@ class HueEntertainmentPanel extends LitElement {
         },
         { type: `${DOMAIN}/subscribe`, colors: true },
       );
-      this.zones = await this.call<Zone[]>("zones");
+      [this.zones, this.scenes] = await Promise.all([
+        this.call<Zone[]>("zones"),
+        this.call<SceneInfo[]>("scenes"),
+      ]);
     } catch (err) {
       this.message = errorText(err);
     }
@@ -99,7 +105,7 @@ class HueEntertainmentPanel extends LitElement {
             ? html`<div class="cards">
                   ${this.renderBridge()} ${this.renderZone()} ${this.renderToggles()}
                 </div>
-                ${this.renderMessage()} ${this.renderPreview()}`
+                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}`
             : this.message
               ? this.renderMessage()
               : html`<div class="card">Loading…</div>`
@@ -276,6 +282,27 @@ class HueEntertainmentPanel extends LitElement {
           </label>
         </div>
       </div>
+    `;
+  }
+
+  private renderScenes() {
+    const s = this.status!;
+    return html`
+      <hue-scene-panel
+        .scenes=${this.scenes}
+        .playing=${s.scene.id}
+        .playingParams=${s.scene.params}
+        .speed=${s.scene.speed}
+        ?disabled=${this.busy || !s.zone}
+        @play=${(e: CustomEvent<{ scene: string; params?: Record<string, unknown> }>) =>
+          this.act("scene/play", {
+            scene: e.detail.scene,
+            ...(e.detail.params ? { params: e.detail.params } : {}),
+          })}
+        @stop=${() => this.act("scene/stop")}
+        @speed=${(e: CustomEvent<{ speed: number }>) =>
+          this.act("speed", { speed: e.detail.speed })}
+      ></hue-scene-panel>
     `;
   }
 

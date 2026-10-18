@@ -53,7 +53,12 @@ export interface Status {
     send_fps: number;
     error: string | null;
   };
-  scene: { id: string | null; speed: number; overlays: number };
+  scene: {
+    id: string | null;
+    params: Record<string, unknown> | null;
+    speed: number;
+    overlays: number;
+  };
   allow_override: boolean;
 }
 
@@ -63,4 +68,22 @@ export interface Zone {
   type: string;
   status: "active" | "inactive";
   channel_count: number;
+}
+
+export interface SceneParameter {
+  type: "color" | "number" | "choice";
+  default: unknown;
+  min?: number;
+  max?: number;
+  options?: unknown[];
+}
+
+export interface SceneInfo {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  builtin: boolean;
+  duration: number | null;
+  parameters: Record<string, SceneParameter>;
 }

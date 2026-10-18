@@ -254,22 +254,22 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, ae = (e) => e, b = y.trustedTypes, x = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, j = /-->/g, ce = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, N = /"/g, P = /^(?:script|style|textarea|title)$/i, F = (e) => (t, ...n) => ({
+var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, T = "?" + w, ae = `<${T}>`, E = document, D = () => E.createComment(""), O = (e) => e === null || typeof e != "object" && typeof e != "function", k = Array.isArray, oe = (e) => k(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, se = /-->/g, ce = />/g, M = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, N = /"/g, P = /^(?:script|style|textarea|title)$/i, F = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), I = F(1), L = F(2), R = Symbol.for("lit-noChange"), z = Symbol.for("lit-nothing"), B = /* @__PURE__ */ new WeakMap(), V = T.createTreeWalker(T, 129);
+}), I = F(1), L = F(2), R = Symbol.for("lit-noChange"), z = Symbol.for("lit-nothing"), B = /* @__PURE__ */ new WeakMap(), V = E.createTreeWalker(E, 129);
 function H(e, t) {
-	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return x === void 0 ? t : x.createHTML(t);
+	if (!k(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return S === void 0 ? t : S.createHTML(t);
 }
 var ue = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = j;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = j : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (P.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? N : le) : o === N || o === le ? o = M : o === j || o === ce ? o = A : (o = M, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = se : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (P.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? N : le) : o === N || o === le ? o = M : o === se || o === ce ? o = j : (o = M, i = void 0);
 		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === A ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
+		a += o === j ? n + ae : l >= 0 ? (r.push(s), n.slice(0, l) + C + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
 	}
 	return [H(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, U = class e {
@@ -283,8 +283,8 @@ var ue = (e, t) => {
 		}
 		for (; (i = V.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
-					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(C)) {
+					let t = u[o++], n = i.getAttribute(e).split(w), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -292,45 +292,45 @@ var ue = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? fe : r[1] === "?" ? pe : r[1] === "@" ? me : K
 					}), i.removeAttribute(e);
-				} else e.startsWith(C) && (c.push({
+				} else e.startsWith(w) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
 				if (P.test(i.tagName)) {
-					let e = i.textContent.split(C), t = e.length - 1;
+					let e = i.textContent.split(w), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = b ? b.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], E()), V.nextNode(), c.push({
+						i.textContent = x ? x.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], D()), V.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], E());
+						i.append(e[t], D());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === w) c.push({
+				if (i.data === T) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(C, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(w, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += C.length - 1;
+					}), e += w.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = T.createElement("template");
+		let n = E.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
 function W(e, t, n = e, r) {
 	if (t === R) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = D(t) ? void 0 : t._$litDirective$;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = O(t) ? void 0 : t._$litDirective$;
 	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = W(e, i._$AS(e, t.values), i, r)), t;
 }
 var de = class {
@@ -344,7 +344,7 @@ var de = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? T).importNode(t, !0);
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? E).importNode(t, !0);
 		V.currentNode = r;
 		let i = V.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
@@ -354,7 +354,7 @@ var de = class {
 			}
 			a !== s?.index && (i = V.nextNode(), a++);
 		}
-		return V.currentNode = T, r;
+		return V.currentNode = E, r;
 	}
 	p(e) {
 		let t = 0;
@@ -378,7 +378,7 @@ var de = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = W(this, e, t), D(e) ? e === z || e == null || e === "" ? (this._$AH !== z && this._$AR(), this._$AH = z) : e !== this._$AH && e !== R && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = W(this, e, t), O(e) ? e === z || e == null || e === "" ? (this._$AH !== z && this._$AR(), this._$AH = z) : e !== this._$AH && e !== R && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? oe(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,7 +387,7 @@ var de = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== z && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
+		this._$AH !== z && O(this._$AH) ? this._$AA.nextSibling.data = e : this.T(E.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
 		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = U.createElement(H(n.h, n.h[0]), this.options)), n);
@@ -402,15 +402,15 @@ var de = class {
 		return t === void 0 && B.set(e.strings, t = new U(e)), t;
 	}
 	k(t) {
-		O(this._$AH) || (this._$AH = [], this._$AR());
+		k(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(E()), this.O(E()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(D()), this.O(D()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ae(e).nextSibling;
-			ae(e).remove(), e = t;
+			let t = b(e).nextSibling;
+			b(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -428,10 +428,10 @@ var de = class {
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = W(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== R, a && (this._$AH = e);
+		if (i === void 0) e = W(this, e, t, 0), a = !O(e) || e !== this._$AH && e !== R, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = W(this, r[n + o], t, o), s === R && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === z ? e = z : e !== z && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = W(this, r[n + o], t, o), s === R && (s = this._$AH[o]), a ||= !O(s) || s !== this._$AH[o], s === z ? e = z : e !== z && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
@@ -480,7 +480,7 @@ var _e = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new G(t.insertBefore(E(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new G(t.insertBefore(D(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
 }, q = globalThis, J = class extends v {
@@ -892,10 +892,364 @@ var De = class extends J {
 };
 customElements.define("hue-room-preview", De);
 //#endregion
-//#region src/panel.ts
-var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke = class extends J {
+//#region src/scenes.ts
+var Oe = class extends J {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.zones = [], this.busy = !1, this.colors = {
+		super(...e), this.scenes = [], this.playing = null, this.playingParams = null, this.speed = 1, this.disabled = !1, this.drafts = {};
+	}
+	static {
+		this.properties = {
+			scenes: { attribute: !1 },
+			playing: { attribute: !1 },
+			playingParams: { attribute: !1 },
+			speed: { type: Number },
+			disabled: { type: Boolean },
+			selected: { state: !0 },
+			drafts: { state: !0 },
+			speedDraft: { state: !0 }
+		};
+	}
+	get current() {
+		let e = this.selected ?? this.playing ?? this.scenes[0]?.id;
+		return this.scenes.find((t) => t.id === e);
+	}
+	values(e) {
+		let t = Object.fromEntries(Object.entries(e.parameters).map(([e, t]) => [e, t.default])), n = e.id === this.playing ? this.playingParams ?? {} : {};
+		return {
+			...t,
+			...n,
+			...this.drafts[e.id] ?? {}
+		};
+	}
+	setValue(e, t, n) {
+		this.drafts = {
+			...this.drafts,
+			[e.id]: {
+				...this.drafts[e.id] ?? {},
+				[t]: n
+			}
+		};
+	}
+	fire(e, t = {}) {
+		this.dispatchEvent(new CustomEvent(e, { detail: t }));
+	}
+	play(e, t) {
+		this.fire("play", {
+			scene: e.id,
+			params: t
+		});
+	}
+	render() {
+		let e = this.current;
+		return I`
+      <div class="grid">
+        ${this.renderList()} ${e ? this.renderForm(e) : z}
+      </div>
+    `;
+	}
+	renderList() {
+		let e = this.speedDraft ?? this.speed;
+		return I`
+      <div class="card">
+        <div class="row">
+          <span class="value">Scenes</span>
+          <span class="secondary small">${this.scenes.length} available</span>
+        </div>
+        <div class="list">
+          ${this.scenes.map((e) => {
+			let t = e.id === this.playing;
+			return I`
+              <div
+                class="scene ${t ? "on" : ""} ${e.id === this.current?.id ? "selected" : ""}"
+                @click=${() => this.selected = e.id}
+              >
+                <div class="info">
+                  <div class="name">${e.name}</div>
+                  ${e.description ? I`<div class="secondary small">${e.description}</div>` : z}
+                </div>
+                <span class="tag">${e.builtin ? "built-in" : "yours"}</span>
+                <button
+                  class=${t ? "stop" : "play"}
+                  ?disabled=${this.disabled}
+                  @click=${(n) => {
+				n.stopPropagation(), t ? this.fire("stop") : this.play(e, this.drafts[e.id] ? this.values(e) : void 0);
+			}}
+                >
+                  ${t ? "Stop" : "Play"}
+                </button>
+              </div>
+            `;
+		})}
+        </div>
+        <label class="row speed">
+          <span class="secondary small">Speed</span>
+          <input
+            type="range"
+            min="0.1"
+            max="4"
+            step="0.1"
+            .value=${String(e)}
+            ?disabled=${this.disabled}
+            @input=${(e) => this.speedDraft = Number(e.target.value)}
+            @change=${(e) => {
+			this.fire("speed", { speed: Number(e.target.value) }), this.speedDraft = void 0;
+		}}
+          />
+          <span class="small">${e.toFixed(1)}×</span>
+        </label>
+      </div>
+    `;
+	}
+	renderForm(e) {
+		let t = Object.entries(e.parameters), n = this.values(e);
+		return I`
+      <div class="card">
+        <div class="row">
+          <span class="value">${e.name}</span>
+          <span class="secondary small">
+            ${e.author ? `by ${e.author}` : ""}
+            ${e.duration ? ` · plays ${e.duration} s` : ""}
+          </span>
+        </div>
+        ${t.length ? I`<div class="form">
+                ${t.map(([t, r]) => this.field(e, t, r, n[t]))}
+              </div>` : I`<div class="secondary small">This scene has no settings.</div>`}
+        <div class="row actions">
+          <button
+            ?disabled=${!this.drafts[e.id]}
+            @click=${() => {
+			let t = { ...this.drafts };
+			delete t[e.id], this.drafts = t;
+		}}
+          >
+            Reset
+          </button>
+          <button
+            class="primary"
+            ?disabled=${this.disabled}
+            @click=${() => this.play(e, n)}
+          >
+            ${e.id === this.playing ? "Apply" : "Play with these"}
+          </button>
+        </div>
+      </div>
+    `;
+	}
+	field(e, t, n, r) {
+		let i = t.replace(/_/g, " "), a = (n) => this.setValue(e, t, n);
+		if (n.type === "color") return I`
+        <label class="field">
+          <span>${i}</span>
+          <input
+            type="color"
+            .value=${ke(r)}
+            @input=${(e) => a(e.target.value)}
+          />
+        </label>
+      `;
+		if (n.type === "number") {
+			let e = Number(r), t = n.min ?? 0, o = n.max ?? Math.max(1, Number(n.default) * 2);
+			return I`
+        <label class="field">
+          <span>${i}</span>
+          <input
+            type="range"
+            min=${t}
+            max=${o}
+            step=${(o - t) / 100}
+            .value=${String(e)}
+            @input=${(e) => a(Number(e.target.value))}
+          />
+          <span class="small num">${Ae(e)}</span>
+        </label>
+      `;
+		}
+		let o = n.options ?? [];
+		return o.length === 2 && o.every((e) => typeof e == "boolean") ? I`
+        <label class="field">
+          <span>${i}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            .checked=${!!r}
+            @change=${(e) => a(e.target.checked)}
+          />
+        </label>
+      ` : I`
+      <label class="field">
+        <span>${i}</span>
+        <select
+          @change=${(e) => a(o[Number(e.target.value)])}
+        >
+          ${o.map((e, t) => I`<option value=${t} ?selected=${e === r}>${String(e)}</option>`)}
+        </select>
+      </label>
+    `;
+	}
+	static {
+		this.styles = o`
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-background-color, #fff);
+      border-radius: var(--ha-card-border-radius, 12px);
+      border: 1px solid var(--divider-color);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .row,
+    .field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .value {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .secondary {
+      color: var(--secondary-text-color);
+    }
+    .small {
+      font-size: 13px;
+    }
+    .list {
+      display: grid;
+    }
+    .scene {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-top: 1px solid var(--divider-color);
+      cursor: pointer;
+    }
+    .scene.selected {
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+      border-radius: 8px;
+    }
+    .scene.on .name {
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+    .info {
+      flex: 1;
+      min-width: 0;
+    }
+    .tag {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
+    button {
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: none;
+      color: var(--primary-text-color);
+      cursor: pointer;
+    }
+    button.primary,
+    button.stop {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .speed input {
+      flex: 1;
+    }
+    .form {
+      display: grid;
+      gap: 10px;
+    }
+    .field span:first-child {
+      color: var(--secondary-text-color);
+      font-size: 14px;
+      text-transform: capitalize;
+      min-width: 90px;
+    }
+    .field input[type="range"] {
+      flex: 1;
+    }
+    .num {
+      min-width: 36px;
+      text-align: right;
+    }
+    .actions {
+      justify-content: flex-end;
+    }
+    input[type="range"] {
+      accent-color: var(--primary-color);
+    }
+    input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
+    select {
+      font: inherit;
+      color: inherit;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--secondary-background-color, transparent);
+    }
+    input[role="switch"] {
+      appearance: none;
+      width: 36px;
+      height: 20px;
+      border-radius: 10px;
+      background: var(--disabled-color, #bdbdbd);
+      position: relative;
+      cursor: pointer;
+    }
+    input[role="switch"]::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.15s;
+    }
+    input[role="switch"]:checked {
+      background: var(--primary-color);
+    }
+    input[role="switch"]:checked::after {
+      left: 18px;
+    }
+  `;
+	}
+};
+function ke(e) {
+	return typeof e == "string" && /^#?[0-9a-f]{6}/i.test(e) ? `#${e.replace("#", "").slice(0, 6)}` : Array.isArray(e) && e.length >= 3 ? `#${e.slice(0, 3).map((e) => Math.max(0, Math.min(255, Math.round(Number(e)))).toString(16).padStart(2, "0")).join("")}` : "#000000";
+}
+function Ae(e) {
+	return Math.abs(e) >= 10 ? e.toFixed(0) : String(Number(e.toFixed(2)));
+}
+customElements.define("hue-scene-panel", Oe);
+//#endregion
+//#region src/panel.ts
+var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me = class extends J {
+	constructor(...e) {
+		super(...e), this.narrow = !1, this.zones = [], this.scenes = [], this.busy = !1, this.colors = {
 			channels: {},
 			brightness: 1
 		}, this.paintColor = "#ff7a00";
@@ -906,6 +1260,7 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
 			narrow: { type: Boolean },
 			status: { state: !0 },
 			zones: { state: !0 },
+			scenes: { state: !0 },
 			message: { state: !0 },
 			busy: { state: !0 },
 			colors: { state: !0 },
@@ -926,9 +1281,9 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
 			}, {
 				type: `${$}/subscribe`,
 				colors: !0
-			}), this.zones = await this.call("zones");
+			}), [this.zones, this.scenes] = await Promise.all([this.call("zones"), this.call("scenes")]);
 		} catch (e) {
-			this.message = Ae(e);
+			this.message = Ne(e);
 		}
 	}
 	call(e, t = {}) {
@@ -942,7 +1297,7 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
 		try {
 			await this.call(e, t), this.message = void 0;
 		} catch (e) {
-			this.message = Ae(e);
+			this.message = Ne(e);
 		} finally {
 			this.busy = !1;
 		}
@@ -961,7 +1316,7 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
         ${this.status ? I`<div class="cards">
                   ${this.renderBridge()} ${this.renderZone()} ${this.renderToggles()}
                 </div>
-                ${this.renderMessage()} ${this.renderPreview()}` : this.message ? this.renderMessage() : I`<div class="card">Loading…</div>`}
+                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}` : this.message ? this.renderMessage() : I`<div class="card">Loading…</div>`}
       </div>
     `;
 	}
@@ -982,9 +1337,9 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
         </div>
         <a
           class="link"
-          href=${Oe}
+          href=${je}
           @click=${(e) => {
-			e.preventDefault(), this.navigate(Oe);
+			e.preventDefault(), this.navigate(je);
 		}}
           >Manage in Devices and services</a
         >
@@ -1087,6 +1442,24 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
           </label>
         </div>
       </div>
+    `;
+	}
+	renderScenes() {
+		let e = this.status;
+		return I`
+      <hue-scene-panel
+        .scenes=${this.scenes}
+        .playing=${e.scene.id}
+        .playingParams=${e.scene.params}
+        .speed=${e.scene.speed}
+        ?disabled=${this.busy || !e.zone}
+        @play=${(e) => this.act("scene/play", {
+			scene: e.detail.scene,
+			...e.detail.params ? { params: e.detail.params } : {}
+		})}
+        @stop=${() => this.act("scene/stop")}
+        @speed=${(e) => this.act("speed", { speed: e.detail.speed })}
+      ></hue-scene-panel>
     `;
 	}
 	renderMessage() {
@@ -1247,8 +1620,8 @@ var $ = "ha_hue_entertainment", Oe = `/config/integrations/integration/${$}`, ke
   `;
 	}
 };
-function Ae(e) {
+function Ne(e) {
 	return e.message ?? String(e);
 }
-customElements.define("ha-hue-entertainment-panel", ke);
+customElements.define("ha-hue-entertainment-panel", Me);
 //#endregion

@@ -132,9 +132,10 @@ added later as an opt-in for compatibility with existing light-show software.
 ### 4. Sidebar panel (admins only, Lit)
 - [x] Sidebar item and full-screen panel (TypeScript + Lit + Vite, committed panel.js)
 - [x] Bridge card with a link to Devices and services for pairing
-- [ ] Live top-view preview of the lights by position; click to paint
+- [x] Live room preview (orthographic, like the Hue app); click to paint
 - [x] Entertainment area picker, Sync and Allow override toggles, state pill, message bar for errors
-- [ ] Scene library: list, preview, play, stop, import, export
+- [x] Scene library: list, play, stop, speed, parameter form generated per scene
+- [ ] Import / export from the panel
 - [ ] Settings: frame rate, default brightness
 
 ### 5. Animated scenes (JSON)
