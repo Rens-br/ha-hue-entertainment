@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
-import type { Hass, Status, Zone } from "./types";
+import "./preview";
+import type { Colors, Hass, Status, Zone } from "./types";
 
 const DOMAIN = "ha_hue_entertainment";
 const INTEGRATION_PAGE = `/config/integrations/integration/${DOMAIN}`;
@@ -14,6 +15,9 @@ class HueEntertainmentPanel extends LitElement {
   private zones: Zone[] = [];
   private message?: string; // last failed action, shown until the next success
   private busy = false; // an action is in flight
+  private colors: Colors = { channels: {}, brightness: 1 };
+  private paintColor = "#ff7a00";
+  private brightnessDraft?: number; // while dragging; live updates must not reset it
   private unsubscribe?: () => Promise<void>;
 
   static properties = {
@@ -23,6 +27,9 @@ class HueEntertainmentPanel extends LitElement {
     zones: { state: true },
     message: { state: true },
     busy: { state: true },
+    colors: { state: true },
+    paintColor: { state: true },
+    brightnessDraft: { state: true },
   };
 
   updated(changed: Map<string, unknown>) {
@@ -40,12 +47,13 @@ class HueEntertainmentPanel extends LitElement {
   private async connect() {
     try {
       this.unsubscribe = await this.hass!.connection.subscribeMessage<
-        { type: string } & Status
+        ({ type: "status" } & Status) | ({ type: "colors" } & Colors)
       >(
         (msg) => {
           if (msg.type === "status") this.status = msg;
+          else if (msg.type === "colors") this.colors = msg;
         },
-        { type: `${DOMAIN}/subscribe`, colors: false },
+        { type: `${DOMAIN}/subscribe`, colors: true },
       );
       this.zones = await this.call<Zone[]>("zones");
     } catch (err) {
@@ -91,7 +99,7 @@ class HueEntertainmentPanel extends LitElement {
             ? html`<div class="cards">
                   ${this.renderBridge()} ${this.renderZone()} ${this.renderToggles()}
                 </div>
-                ${this.renderMessage()}`
+                ${this.renderMessage()} ${this.renderPreview()}`
             : this.message
               ? this.renderMessage()
               : html`<div class="card">Loading…</div>`
@@ -203,6 +211,71 @@ class HueEntertainmentPanel extends LitElement {
           @change=${(e: Event) => onChange((e.target as HTMLInputElement).checked)}
         />
       </label>
+    `;
+  }
+
+  private renderPreview() {
+    const s = this.status!;
+    const syncing = s.streaming.target_fps !== null;
+    const brightness = this.brightnessDraft ?? Math.round(this.colors.brightness * 100);
+    return html`
+      <div class="card">
+        <div class="row">
+          <span class="value">Live preview</span>
+          <span class="secondary small">
+            ${
+              syncing
+                ? "Select a light to paint it."
+                : "Sync is off. Showing the colours sync starts with."
+            }
+          </span>
+        </div>
+        <hue-room-preview
+          .channels=${s.zone_layout?.channels ?? []}
+          .lightInfo=${s.zone_layout?.lights ?? []}
+          .colors=${this.colors.channels}
+          ?active=${syncing}
+          @paint=${(e: CustomEvent<{ channels: number[] }>) =>
+            this.act("colors/set", {
+              channels: Object.fromEntries(
+                e.detail.channels.map((id) => [id, this.paintColor]),
+              ),
+              overlay: s.scene.id !== null, // keep a running scene going around it
+            })}
+        ></hue-room-preview>
+        <div class="row controls">
+          <label class="row">
+            <input
+              type="color"
+              .value=${this.paintColor}
+              @input=${(e: Event) =>
+                (this.paintColor = (e.target as HTMLInputElement).value)}
+            />
+            <span class="secondary small">Paint colour</span>
+          </label>
+          <label class="row grow">
+            <span class="secondary small">Brightness</span>
+            <input
+              class="grow"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              .value=${String(brightness)}
+              @input=${(e: Event) =>
+                (this.brightnessDraft = Number((e.target as HTMLInputElement).value))}
+              @change=${async (e: Event) => {
+                await this.act("colors/set", {
+                  brightness: Number((e.target as HTMLInputElement).value) / 100,
+                  start: false,
+                });
+                this.brightnessDraft = undefined;
+              }}
+            />
+            <span class="small">${brightness}%</span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -337,6 +410,24 @@ class HueEntertainmentPanel extends LitElement {
     input[role="switch"]:disabled {
       opacity: 0.5;
       cursor: default;
+    }
+    .controls {
+      flex-wrap: wrap;
+    }
+    .grow {
+      flex: 1;
+    }
+    input[type="color"] {
+      width: 40px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
+    input[type="range"] {
+      accent-color: var(--primary-color);
     }
     .message {
       padding: 10px 14px;

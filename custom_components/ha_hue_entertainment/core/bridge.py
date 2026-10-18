@@ -165,22 +165,54 @@ class HueBridge:
         cfg = configs[0]
         dev_names = {d["id"]: d["metadata"]["name"] for d in devices}
         ent_owner = {e["id"]: dev_names.get(e["owner"]["rid"], "?") for e in ents}
-        channels = []
+        seg_count = {
+            e["id"]: len((e.get("segments") or {}).get("segments", [])) or 1
+            for e in ents
+        }
+        # Where each light really is (gradient lights: start and end point), as set
+        # in the Hue app. Channel positions are the bridge's computed centres.
+        placement = {
+            loc["service"]["rid"]: loc.get("positions", [])
+            for loc in (cfg.get("locations") or {}).get("service_locations", [])
+        }
+        channels, lights = [], {}
         for ch in cfg.get("channels", []):
-            names = []
-            for m in ch.get("members", []):
-                name = ent_owner.get(m["service"]["rid"], "?")
-                idx = m.get("index", 0)
-                names.append(f"{name} #{idx + 1}" if _multi_segment(cfg, m) else name)
-            channels.append(
-                {"id": ch["channel_id"], "position": ch["position"], "lights": names}
+            members = ch.get("members", [])
+            rid = members[0]["service"]["rid"] if members else None
+            name = ent_owner.get(rid, "?")
+            # A channel can cover several segments of one gradient light.
+            segments = sorted(
+                m.get("index", 0) for m in members if m["service"]["rid"] == rid
             )
+            multi = _multi_segment(cfg, members[0]) if members else False
+            channels.append(
+                {
+                    "id": ch["channel_id"],
+                    "position": ch["position"],
+                    "lights": [_segment_label(name, segments) if multi else name],
+                    "light_id": rid,
+                    "light": name,
+                    "segment": segments[0] if segments else 0,
+                    "segments": segments,
+                }
+            )
+            if rid and rid not in lights:
+                lights[rid] = {
+                    "id": rid,
+                    "name": name,
+                    "positions": placement.get(rid, []),
+                    "segment_count": seg_count.get(rid, 1),
+                }
+        for ch in channels:
+            light = lights.get(ch["light_id"])
+            ch["placed"] = _placed(ch, light) if light else ch["position"]
         return {
             "id": cfg["id"],
             "name": cfg["metadata"]["name"],
             "type": cfg.get("configuration_type"),
             "status": cfg.get("status"),
             "channels": channels,
+            "lights": list(lights.values()),
         }
 
     async def set_streaming(self, zone_id: str, active: bool) -> None:
@@ -225,6 +257,40 @@ class HueBridge:
         """Describe who is streaming right now, e.g. "'TV' by HueSyncBox", or None."""
         active = await self.active_streams()
         return f"'{active[0]['name']}' by {active[0]['app']}" if active else None
+
+
+def _placed(channel: dict, light: dict) -> dict:
+    """Where a channel really is: the middle of its segments along the light as
+    placed in the Hue app. Falls back to the bridge's channel position."""
+    points = light["positions"]
+    if not points:
+        return channel["position"]
+    if len(points) == 1 or not channel["segments"]:
+        return points[0]
+    count = max(light["segment_count"], channel["segments"][-1] + 1)
+    t = (channel["segments"][0] + channel["segments"][-1] + 1) / 2 / count
+    # walk the polyline to fraction t of its length
+    lengths = [
+        sum((b[k] - a[k]) ** 2 for k in "xyz") ** 0.5
+        for a, b in zip(points, points[1:], strict=False)
+    ]
+    target, total = t * sum(lengths), 0.0
+    for (a, b), length in zip(
+        zip(points, points[1:], strict=False), lengths, strict=True
+    ):
+        if total + length >= target and length > 0:
+            f = (target - total) / length
+            return {k: a[k] + (b[k] - a[k]) * f for k in "xyz"}
+        total += length
+    return points[-1]
+
+
+def _segment_label(name: str, segments: list[int]) -> str:
+    """ "Bike light 1-2" for a channel covering segments 0 and 1."""
+    if not segments:
+        return name
+    lo, hi = segments[0] + 1, segments[-1] + 1
+    return f"{name} {lo}" if lo == hi else f"{name} {lo}-{hi}"
 
 
 def _multi_segment(cfg: dict, member: dict) -> bool:

@@ -209,8 +209,9 @@ class HueSyncEngine:
         self.frame_version += 1
 
     def _positions(self) -> dict[int, tuple[float, float, float]]:
+        # "placed": the channel's spot along the light as set in the Hue app
         return {
-            ch["id"]: (ch["position"]["x"], ch["position"]["y"], ch["position"]["z"])
+            ch["id"]: tuple(ch.get("placed", ch["position"])[k] for k in "xyz")
             for ch in self.zone["channels"]
         }
 

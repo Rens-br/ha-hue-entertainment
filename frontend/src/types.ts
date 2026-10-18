@@ -17,13 +17,35 @@ export interface Channel {
   id: number;
   position: { x: number; y: number; z: number };
   lights: string[];
+  light_id?: string; // same for all segments of one gradient light
+  light?: string;
+  segment?: number;
+  segments?: number[]; // light segments this channel covers
+  placed?: { x: number; y: number; z: number }; // spot along the light as placed
+}
+
+export interface LightInfo {
+  id: string;
+  name: string;
+  positions: { x: number; y: number; z: number }[]; // gradient lights: start and end
+  segment_count: number;
+}
+
+export interface Colors {
+  channels: Record<string, string>; // channel id -> "#rrggbb"
+  brightness: number; // 0..1
 }
 
 export interface Status {
   paired: boolean;
   bridge: { host: string; id: string; name: string } | null;
   zone: { id: string; name: string; channels: number } | null;
-  zone_layout: { id: string; name: string; channels: Channel[] } | null;
+  zone_layout: {
+    id: string;
+    name: string;
+    channels: Channel[];
+    lights?: LightInfo[];
+  } | null;
   streaming: {
     active: boolean;
     state: "off" | "streaming" | "reconnecting";
