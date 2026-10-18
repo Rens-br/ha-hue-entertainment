@@ -94,7 +94,7 @@
         },
         "params": {
           "name": "Parameters",
-          "description": "Scene parameters, for example {\"color\": \"#0050ff\"}. Others keep their defaults."
+          "description": "Scene parameters by name, for example color set to \"#0050ff\". Parameters not given keep their defaults."
         },
         "speed": {
           "name": "Speed",
