@@ -118,11 +118,13 @@ added later as an opt-in for compatibility with existing light-show software.
       (replaces the separate sync switch)
 - [x] Busy reporting: starting while another app syncs fails with "busy: <area> by <app>"
 - [x] Another app taking over (Hue app, Sync Box) turns sync off instead of fighting back
-- [ ] Rest of the entity model (scenes as light effects, numbers, when-idle select)
+- [x] Scenes as effects of the Entertainment light; Scene speed slider (brightness is the light's own)
+- [x] `play_scene` (with parameters and speed) and `stop_scene` actions
+- [ ] When-idle select
 - [ ] Stream state sensor (off / streaming / reconnecting, holder, last error), moved back on request
 - [x] `set_colors` service: per-channel and whole-area colours, optional per-colour brightness;
       channel ids listed in the light's `channels` attribute
-- [ ] Other services (play_scene, stop_scene, import/export), with descriptions and translations
+- [ ] Import/export actions
 - [x] Allow override setting (decision 9): a configuration switch; when on, starting sync or switching
       zones stops another app's stream first. Automatic reconnects never override
 - [x] Restore the lights' pre-sync state after stopping: the bridge does this itself, nothing to build
@@ -140,8 +142,8 @@ added later as an opt-in for compatibility with existing light-show software.
       solid / gradient / band / noise / flash with normal / add / max blending
 - [x] Scene engine: computes each channel's colour from its position and time for every packet
 - [x] First built-in scenes: Sweep, Aurora, Thunderstorm (tested on real lights)
-- [ ] Load user scenes from `/config/ha_hue_entertainment/scenes/`; validation with clear errors
-- [x] Overlay in the core and standalone API (decision 19); Home Assistant side follows with the scenes
+- [x] Load user scenes from `/config/ha_hue_entertainment/scenes/` (created on setup); invalid files logged
+- [x] Overlay (decision 19): `overlay`, `duration` and `clear_overlay` on set_colors
 - [ ] Later: import / export actions
 
 ### 6. Builder interface

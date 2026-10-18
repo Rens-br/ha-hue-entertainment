@@ -1,6 +1,9 @@
 """Hue Entertainment: stream colours and animations to a Hue entertainment area."""
 from __future__ import annotations
 
+import logging
+from pathlib import Path
+
 from homeassistant.components import zeroconf
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
@@ -20,10 +23,15 @@ from .const import (
 )
 from .core.config import Settings
 from .core.engine import HueSyncEngine
+from .core.scenes import Scene, load_scene_dir
+
+_LOGGER = logging.getLogger(__name__)
+
+BUILTIN_SCENES = Path(__file__).parent / "scenes"
 
 type HueEntertainmentConfigEntry = ConfigEntry[HueSyncEngine]
 
-PLATFORMS = [Platform.LIGHT, Platform.SELECT, Platform.SWITCH]
+PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SWITCH]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:
@@ -50,6 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEn
         app_name=APP_NAME,
     )
     engine.allow_override = entry.options.get(CONF_ALLOW_OVERRIDE, False)
+    engine.set_scenes(await hass.async_add_executor_job(_load_scenes, Path(hass.config.path(DOMAIN, "scenes"))))
     await engine.startup()
     if not engine.bridge_name:
         await engine.shutdown()
@@ -69,6 +78,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEn
     entry.runtime_data = engine
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+def _load_scenes(user_dir: Path) -> dict[str, Scene]:
+    """Built-in scenes plus *.json from /config/ha_hue_entertainment/scenes (same id replaces)."""
+    user_dir.mkdir(parents=True, exist_ok=True)  # so users can find where scenes go
+    builtin, _ = load_scene_dir(BUILTIN_SCENES, builtin=True)
+    user, errors = load_scene_dir(user_dir)
+    for err in errors:
+        _LOGGER.warning("Scene not loaded: %s", err)
+    if user:
+        _LOGGER.info("Loaded %d scene(s) from %s", len(user), user_dir)
+    return {**builtin, **user}
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HueEntertainmentConfigEntry) -> bool:
