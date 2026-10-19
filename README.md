@@ -8,9 +8,6 @@ Drive a Philips Hue **entertainment area** from Home Assistant: colours,
 animated scenes that move through the room, and live control from your own
 programs using the fast stream the Hue Sync apps use: about 50 updates a second to the bridge, which updates the lights about 25 times a second.
 
-> **AI Notice:**
-This integration is largely coded by AI but with supervision and my own coding here and there, because I mainly intended it for my own use. If there is enough interest in this project I will dedicate more of my time to it.
-
 ## What you get
 - **Home Assistant entities** an Entertainment light (with the scenes as effects), the area, scene speed and an allow-override setting.
 - **A sidebar panel** to pick the entertainment area, turn sync on and off, see a live 3D-style view of the room with every light in its place and colour, paint lights, and play scenes with their own settings.
@@ -164,8 +161,7 @@ lightning that strikes somewhere and rolls through the room).
 > Some scenes, like Thunderstorm, flash. If anyone is sensitive to flashing light, avoid them.
 
 **Your own scenes** are JSON files in `config/ha_hue_entertainment/scenes/` (the
-folder is created on setup). They are read at startup and when you reload the
-integration; a scene with the same `id` as a built-in replaces it, and invalid
+folder is created on setup). They are read at startup and can be reloaded from the planel, a scene with the same `id` as a built-in replaces it, and invalid
 files are skipped with the reason in the log.
 
 A scene has settings (`parameters`) and `layers` that compute each light's

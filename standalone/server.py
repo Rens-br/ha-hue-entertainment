@@ -101,7 +101,9 @@ def create_app() -> FastAPI:
     user_scenes, scene_errors = load_scene_dir(USER_SCENES)
     for err in scene_errors:
         log.warning("Scene not loaded: %s", err)
-    engine.set_scenes({**scenes, **user_scenes})
+
+    all_scenes = {**scenes, **user_scenes}
+
     sockets: set[Client] = set()
 
     async def broadcast_status():
@@ -129,6 +131,8 @@ def create_app() -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
+        await engine.set_scenes(all_scenes)
+
         await engine.startup()
         task = asyncio.create_task(pusher())
         yield

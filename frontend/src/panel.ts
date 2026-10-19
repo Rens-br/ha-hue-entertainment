@@ -306,6 +306,14 @@ class HueEntertainmentPanel extends LitElement {
         @stop=${() => this.act("scene/stop")}
         @speed=${(e: CustomEvent<{ speed: number }>) =>
           this.act("speed", { speed: e.detail.speed })}
+        @reload-scenes=${async () => {
+          try {
+            this.scenes = await this.call<SceneInfo[]>("scenes/reload");
+            this.message = undefined;
+          } catch (err) {
+            this.message = errorText(err);
+          }
+        }}
       ></hue-scene-panel>
     `;
   }

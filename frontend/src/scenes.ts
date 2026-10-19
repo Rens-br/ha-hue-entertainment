@@ -59,6 +59,10 @@ class HueScenePanel extends LitElement {
     this.fire("play", { scene: scene.id, params });
   }
 
+  private reloadScenes() {
+    this.fire("reload-scenes");
+  }
+
   render() {
     const scene = this.current;
     return html`
@@ -74,7 +78,17 @@ class HueScenePanel extends LitElement {
       <div class="card">
         <div class="row">
           <span class="value">Scenes</span>
-          <span class="secondary small">${this.scenes.length} available</span>
+          <span>
+            <button
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this.reloadScenes();
+              }}
+            >
+              Reload Scenes
+            </button>
+            <span class="secondary small">${this.scenes.length} available</span>
+          </span>
         </div>
         <div class="list">
           ${this.scenes.map((s) => {

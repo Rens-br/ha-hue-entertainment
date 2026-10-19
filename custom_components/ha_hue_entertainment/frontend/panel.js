@@ -254,34 +254,34 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, T = "?" + w, ae = `<${T}>`, E = document, D = () => E.createComment(""), O = (e) => e === null || typeof e != "object" && typeof e != "function", k = Array.isArray, oe = (e) => k(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, se = /-->/g, ce = />/g, M = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, N = /"/g, P = /^(?:script|style|textarea|title)$/i, F = (e) => (t, ...n) => ({
+var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, T = "?" + w, ae = `<${T}>`, E = document, D = () => E.createComment(""), O = (e) => e === null || typeof e != "object" && typeof e != "function", k = Array.isArray, oe = (e) => k(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, se = /-->/g, ce = />/g, M = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, N = /^(?:script|style|textarea|title)$/i, P = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), I = F(1), L = F(2), R = Symbol.for("lit-noChange"), z = Symbol.for("lit-nothing"), B = /* @__PURE__ */ new WeakMap(), V = E.createTreeWalker(E, 129);
-function H(e, t) {
+}), F = P(1), I = P(2), L = Symbol.for("lit-noChange"), R = Symbol.for("lit-nothing"), z = /* @__PURE__ */ new WeakMap(), B = E.createTreeWalker(E, 129);
+function V(e, t) {
 	if (!k(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
 	return S === void 0 ? t : S.createHTML(t);
 }
-var ue = (e, t) => {
+var de = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = j;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = se : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (P.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? N : le) : o === N || o === le ? o = M : o === se || o === ce ? o = j : (o = M, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = se : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (N.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === se || o === ce ? o = j : (o = M, i = void 0);
 		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
 		a += o === j ? n + ae : l >= 0 ? (r.push(s), n.slice(0, l) + C + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
 	}
-	return [H(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, U = class e {
+	return [V(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, H = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = ue(t, n);
-		if (this.el = e.createElement(l, r), V.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = de(t, n);
+		if (this.el = e.createElement(l, r), B.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = V.nextNode()) !== null && c.length < s;) {
+		for (; (i = B.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
 				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(C)) {
 					let t = u[o++], n = i.getAttribute(e).split(w), r = /([.?@])?(.*)/.exec(t);
@@ -290,17 +290,17 @@ var ue = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? fe : r[1] === "?" ? pe : r[1] === "@" ? me : K
+						ctor: r[1] === "." ? pe : r[1] === "?" ? me : r[1] === "@" ? he : G
 					}), i.removeAttribute(e);
 				} else e.startsWith(w) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (P.test(i.tagName)) {
+				if (N.test(i.tagName)) {
 					let e = i.textContent.split(w), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = x ? x.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], D()), V.nextNode(), c.push({
+						for (let n = 0; n < t; n++) i.append(e[n], D()), B.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -328,12 +328,12 @@ var ue = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function W(e, t, n = e, r) {
-	if (t === R) return t;
+function U(e, t, n = e, r) {
+	if (t === L) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = O(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = W(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = U(e, i._$AS(e, t.values), i, r)), t;
 }
-var de = class {
+var fe = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -345,27 +345,27 @@ var de = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? E).importNode(t, !0);
-		V.currentNode = r;
-		let i = V.nextNode(), a = 0, o = 0, s = n[0];
+		B.currentNode = r;
+		let i = B.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new G(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new he(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new W(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new ge(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = V.nextNode(), a++);
+			a !== s?.index && (i = B.nextNode(), a++);
 		}
-		return V.currentNode = E, r;
+		return B.currentNode = E, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, G = class e {
+}, W = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = z, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = R, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -378,7 +378,7 @@ var de = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = W(this, e, t), O(e) ? e === z || e == null || e === "" ? (this._$AH !== z && this._$AR(), this._$AH = z) : e !== this._$AH && e !== R && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? oe(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = U(this, e, t), O(e) ? e === R || e == null || e === "" ? (this._$AH !== R && this._$AR(), this._$AH = R) : e !== this._$AH && e !== L && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? oe(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,19 +387,19 @@ var de = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== z && O(this._$AH) ? this._$AA.nextSibling.data = e : this.T(E.createTextNode(e)), this._$AH = e;
+		this._$AH !== R && O(this._$AH) ? this._$AA.nextSibling.data = e : this.T(E.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = U.createElement(H(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = H.createElement(V(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new de(r, this), n = e.u(this.options);
+			let e = new fe(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = B.get(e.strings);
-		return t === void 0 && B.set(e.strings, t = new U(e)), t;
+		let t = z.get(e.strings);
+		return t === void 0 && z.set(e.strings, t = new H(e)), t;
 	}
 	k(t) {
 		k(this._$AH) || (this._$AH = [], this._$AR());
@@ -416,7 +416,7 @@ var de = class {
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, K = class {
+}, G = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -424,47 +424,47 @@ var de = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = z, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = z;
+		this.type = 1, this._$AH = R, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = R;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = W(this, e, t, 0), a = !O(e) || e !== this._$AH && e !== R, a && (this._$AH = e);
+		if (i === void 0) e = U(this, e, t, 0), a = !O(e) || e !== this._$AH && e !== L, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = W(this, r[n + o], t, o), s === R && (s = this._$AH[o]), a ||= !O(s) || s !== this._$AH[o], s === z ? e = z : e !== z && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = U(this, r[n + o], t, o), s === L && (s = this._$AH[o]), a ||= !O(s) || s !== this._$AH[o], s === R ? e = R : e !== R && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === z ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === R ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, fe = class extends K {
+}, pe = class extends G {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === z ? void 0 : e;
+		this.element[this.name] = e === R ? void 0 : e;
 	}
-}, pe = class extends K {
+}, me = class extends G {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== z);
+		this.element.toggleAttribute(this.name, !!e && e !== R);
 	}
-}, me = class extends K {
+}, he = class extends G {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = W(this, e, t, 0) ?? z) === R) return;
-		let n = this._$AH, r = e === z && n !== z || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== z && (n === z || r);
+		if ((e = U(this, e, t, 0) ?? R) === L) return;
+		let n = this._$AH, r = e === R && n !== R || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== R && (n === R || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, he = class {
+}, ge = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -472,18 +472,18 @@ var de = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		W(this, e);
+		U(this, e);
 	}
-}, ge = y.litHtmlPolyfillSupport;
-ge?.(U, G), (y.litHtmlVersions ??= []).push("3.3.3");
-var _e = (e, t, n) => {
+}, _e = y.litHtmlPolyfillSupport;
+_e?.(H, W), (y.litHtmlVersions ??= []).push("3.3.3");
+var ve = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new G(t.insertBefore(D(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new W(t.insertBefore(D(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, q = globalThis, J = class extends v {
+}, K = globalThis, q = class extends v {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -493,7 +493,7 @@ var _e = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = _e(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = ve(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -502,19 +502,19 @@ var _e = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return R;
+		return L;
 	}
 };
-J._$litElement$ = !0, J.finalized = !0, q.litElementHydrateSupport?.({ LitElement: J });
-var ve = q.litElementPolyfillSupport;
-ve?.({ LitElement: J }), (q.litElementVersions ??= []).push("4.2.2");
+q._$litElement$ = !0, q.finalized = !0, K.litElementHydrateSupport?.({ LitElement: q });
+var ye = K.litElementPolyfillSupport;
+ye?.({ LitElement: q }), (K.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region src/preview.ts
-var Y = 440, ye = 98, be = 50, xe = 42, Se = 312, Ce = Y / 2, we = 156, X = (e) => ({
-	x: Ce + (e.x + e.y) * ye,
-	y: we + (e.x - e.y) * be - e.z * xe
-}), Z = (e) => e.map((e) => `${X(e).x},${X(e).y}`).join(" "), Te = (e) => e.reduce((e, t) => e + t.x - t.y, 0) / e.length, Q = (e) => e.placed ?? e.position;
-function Ee(e, t, n) {
+var J = 440, be = 98, xe = 50, Se = 42, Ce = 312, we = J / 2, Te = 156, Y = (e) => ({
+	x: we + (e.x + e.y) * be,
+	y: Te + (e.x - e.y) * xe - e.z * Se
+}), X = (e) => e.map((e) => `${Y(e).x},${Y(e).y}`).join(" "), Ee = (e) => e.reduce((e, t) => e + t.x - t.y, 0) / e.length, Z = (e) => e.placed ?? e.position;
+function De(e, t, n) {
 	let r = e.slice(1).map((t, n) => Math.hypot(t.x - e[n].x, t.y - e[n].y)), i = r.reduce((e, t) => e + t, 0), a = (t) => {
 		let n = t * i;
 		for (let t = 0; t < r.length; t++) {
@@ -531,7 +531,7 @@ function Ee(e, t, n) {
 	};
 	return [a(t), a(n)];
 }
-var De = class extends J {
+var Oe = class extends q {
 	constructor(...e) {
 		super(...e), this.channels = [], this.lightInfo = [], this.colors = {}, this.active = !1;
 	}
@@ -573,16 +573,16 @@ var De = class extends J {
 		this.hovered = e;
 	}
 	render() {
-		if (!this.channels.length) return I`<div class="empty">
+		if (!this.channels.length) return F`<div class="empty">
         Choose an entertainment area to see its lights.
       </div>`;
-		let e = this.lights(), t = [...e].sort((e, t) => Te(e.positions.length ? e.positions : e.channels.map(Q)) - Te(t.positions.length ? t.positions : t.channels.map(Q)));
-		return I`
+		let e = this.lights(), t = [...e].sort((e, t) => Ee(e.positions.length ? e.positions : e.channels.map(Z)) - Ee(t.positions.length ? t.positions : t.channels.map(Z)));
+		return F`
       <div class="stage">
-        <svg viewBox="0 0 ${Y} ${Se}" class=${this.active ? "live" : "faded"}>
+        <svg viewBox="0 0 ${J} ${Ce}" class=${this.active ? "live" : "faded"}>
           <polygon
             class="wall left"
-            points=${Z([
+            points=${X([
 			{
 				x: -1,
 				y: 1,
@@ -607,7 +607,7 @@ var De = class extends J {
           ></polygon>
           <polygon
             class="wall front"
-            points=${Z([
+            points=${X([
 			{
 				x: -1,
 				y: 1,
@@ -632,7 +632,7 @@ var De = class extends J {
           ></polygon>
           <polygon
             class="floor"
-            points=${Z([
+            points=${X([
 			{
 				x: -1,
 				y: 1,
@@ -659,7 +659,7 @@ var De = class extends J {
                the Hue app shows it: TV backlights around the middle of the screen -->
           <polygon
             class="tv"
-            points=${Z([
+            points=${X([
 			{
 				x: -.3,
 				y: 1,
@@ -689,7 +689,7 @@ var De = class extends J {
         </div>
       </div>
       <div class="legend">
-        ${e.map((e) => I`
+        ${e.map((e) => F`
             <button
               class="chip"
               title="Paint ${e.name}"
@@ -698,7 +698,7 @@ var De = class extends J {
               @mouseleave=${() => this.hover()}
             >
               <span class="swatch">
-                ${e.channels.map((e) => I`<span style="background:${this.color(e)}"></span>`)}
+                ${e.channels.map((e) => F`<span style="background:${this.color(e)}"></span>`)}
               </span>
               <span class="chip-name">${e.name}</span>
               <span class="ids">${e.channels.map((e) => e.id).join(", ")}</span>
@@ -708,19 +708,19 @@ var De = class extends J {
     `;
 	}
 	pole(e) {
-		if (e.z <= -.97) return L``;
-		let t = X({
+		if (e.z <= -.97) return I``;
+		let t = Y({
 			...e,
 			z: -1
-		}), n = X(e);
-		return L`
+		}), n = Y(e);
+		return I`
       <line class="pole" x1=${t.x} y1=${t.y} x2=${n.x} y2=${n.y}></line>
       <ellipse class="foot" cx=${t.x} cy=${t.y} rx="4.5" ry="2.2"></ellipse>
     `;
 	}
 	dot(e) {
-		let t = e.channels[0], n = e.positions[0] ?? Q(t), { x: r, y: i } = X(n), a = this.color(t), o = this.hovered === e;
-		return L`
+		let t = e.channels[0], n = e.positions[0] ?? Z(t), { x: r, y: i } = Y(n), a = this.color(t), o = this.hovered === e;
+		return I`
       <g class="light" @click=${() => this.paint([t])}
         @mouseenter=${() => this.hover(e)} @mouseleave=${() => this.hover()}>
         ${this.pole(n)}
@@ -730,8 +730,8 @@ var De = class extends J {
     `;
 	}
 	bar(e) {
-		let t = e.positions.map(X), n = (e) => e.map((e, t) => `${t ? "L" : "M"}${e.x},${e.y}`).join(" "), r = t[0], i = t[t.length - 1], a = `g-${e.id}`, o = e.channels.length, s = e.channels.map((e, t) => L`<stop offset=${o > 1 ? t / (o - 1) : 0} stop-color=${this.color(e)}></stop>`), c = this.hovered === e;
-		return L`
+		let t = e.positions.map(Y), n = (e) => e.map((e, t) => `${t ? "L" : "M"}${e.x},${e.y}`).join(" "), r = t[0], i = t[t.length - 1], a = `g-${e.id}`, o = e.channels.length, s = e.channels.map((e, t) => I`<stop offset=${o > 1 ? t / (o - 1) : 0} stop-color=${this.color(e)}></stop>`), c = this.hovered === e;
+		return I`
       <g class="light" @mouseenter=${() => this.hover(e)} @mouseleave=${() => this.hover()}>
         ${this.pole(e.positions[0])} ${this.pole(e.positions[e.positions.length - 1])}
         <defs>
@@ -741,7 +741,7 @@ var De = class extends J {
         <path d=${n(t)} stroke=${`url(#${a})`} class="bar-glow"></path>
         <path d=${n(t)} class="bar-edge"></path>
         <path d=${n(t)} stroke=${`url(#${a})`} class=${c ? "bar hot" : "bar"}></path>
-        ${e.channels.map((e, r) => L`<path class="hit-bar" d=${n(Ee(t, r / o, (r + 1) / o))}
+        ${e.channels.map((e, r) => I`<path class="hit-bar" d=${n(De(t, r / o, (r + 1) / o))}
             @click=${() => this.paint([e])}></path>`)}
       </g>
     `;
@@ -890,10 +890,10 @@ var De = class extends J {
   `;
 	}
 };
-customElements.define("hue-room-preview", De);
+customElements.define("hue-room-preview", Oe);
 //#endregion
 //#region src/scenes.ts
-var Oe = class extends J {
+var ke = class extends q {
 	constructor(...e) {
 		super(...e), this.scenes = [], this.playing = null, this.playingParams = null, this.speed = 1, this.disabled = !1, this.drafts = {};
 	}
@@ -939,33 +939,45 @@ var Oe = class extends J {
 			params: t
 		});
 	}
+	reloadScenes() {
+		this.fire("reload-scenes");
+	}
 	render() {
 		let e = this.current;
-		return I`
+		return F`
       <div class="grid">
-        ${this.renderList()} ${e ? this.renderForm(e) : z}
+        ${this.renderList()} ${e ? this.renderForm(e) : R}
       </div>
     `;
 	}
 	renderList() {
 		let e = this.speedDraft ?? this.speed;
-		return I`
+		return F`
       <div class="card">
         <div class="row">
           <span class="value">Scenes</span>
-          <span class="secondary small">${this.scenes.length} available</span>
+          <span>
+            <button
+              @click=${(e) => {
+			e.stopPropagation(), this.reloadScenes();
+		}}
+            >
+              Reload Scenes
+            </button>
+            <span class="secondary small">${this.scenes.length} available</span>
+          </span>
         </div>
         <div class="list">
           ${this.scenes.map((e) => {
 			let t = e.id === this.playing;
-			return I`
+			return F`
               <div
                 class="scene ${t ? "on" : ""} ${e.id === this.current?.id ? "selected" : ""}"
                 @click=${() => this.selected = e.id}
               >
                 <div class="info">
                   <div class="name">${e.name}</div>
-                  ${e.description ? I`<div class="secondary small">${e.description}</div>` : z}
+                  ${e.description ? F`<div class="secondary small">${e.description}</div>` : R}
                 </div>
                 <span class="tag">${e.builtin ? "built-in" : "yours"}</span>
                 <button
@@ -1002,7 +1014,7 @@ var Oe = class extends J {
 	}
 	renderForm(e) {
 		let t = Object.entries(e.parameters), n = this.values(e);
-		return I`
+		return F`
       <div class="card">
         <div class="row">
           <span class="value">${e.name}</span>
@@ -1011,9 +1023,9 @@ var Oe = class extends J {
             ${e.duration ? ` · plays ${e.duration} s` : ""}
           </span>
         </div>
-        ${t.length ? I`<div class="form">
+        ${t.length ? F`<div class="form">
                 ${t.map(([t, r]) => this.field(e, t, r, n[t]))}
-              </div>` : I`<div class="secondary small">This scene has no settings.</div>`}
+              </div>` : F`<div class="secondary small">This scene has no settings.</div>`}
         <div class="row actions">
           <button
             ?disabled=${!this.drafts[e.id]}
@@ -1037,19 +1049,19 @@ var Oe = class extends J {
 	}
 	field(e, t, n, r) {
 		let i = t.replace(/_/g, " "), a = (n) => this.setValue(e, t, n);
-		if (n.type === "color") return I`
+		if (n.type === "color") return F`
         <label class="field">
           <span>${i}</span>
           <input
             type="color"
-            .value=${ke(r)}
+            .value=${Ae(r)}
             @input=${(e) => a(e.target.value)}
           />
         </label>
       `;
 		if (n.type === "number") {
 			let e = Number(r), t = n.min ?? 0, o = n.max ?? Math.max(1, Number(n.default) * 2);
-			return I`
+			return F`
         <label class="field">
           <span>${i}</span>
           <input
@@ -1060,12 +1072,12 @@ var Oe = class extends J {
             .value=${String(e)}
             @input=${(e) => a(Number(e.target.value))}
           />
-          <span class="small num">${Ae(e)}</span>
+          <span class="small num">${je(e)}</span>
         </label>
       `;
 		}
 		let o = n.options ?? [];
-		return o.length === 2 && o.every((e) => typeof e == "boolean") ? I`
+		return o.length === 2 && o.every((e) => typeof e == "boolean") ? F`
         <label class="field">
           <span>${i}</span>
           <input
@@ -1075,13 +1087,13 @@ var Oe = class extends J {
             @change=${(e) => a(e.target.checked)}
           />
         </label>
-      ` : I`
+      ` : F`
       <label class="field">
         <span>${i}</span>
         <select
           @change=${(e) => a(o[Number(e.target.value)])}
         >
-          ${o.map((e, t) => I`<option value=${t} ?selected=${e === r}>${String(e)}</option>`)}
+          ${o.map((e, t) => F`<option value=${t} ?selected=${e === r}>${String(e)}</option>`)}
         </select>
       </label>
     `;
@@ -1238,16 +1250,16 @@ var Oe = class extends J {
   `;
 	}
 };
-function ke(e) {
+function Ae(e) {
 	return typeof e == "string" && /^#?[0-9a-f]{6}/i.test(e) ? `#${e.replace("#", "").slice(0, 6)}` : Array.isArray(e) && e.length >= 3 ? `#${e.slice(0, 3).map((e) => Math.max(0, Math.min(255, Math.round(Number(e)))).toString(16).padStart(2, "0")).join("")}` : "#000000";
 }
-function Ae(e) {
+function je(e) {
 	return Math.abs(e) >= 10 ? e.toFixed(0) : String(Number(e.toFixed(2)));
 }
-customElements.define("hue-scene-panel", Oe);
+customElements.define("hue-scene-panel", ke);
 //#endregion
 //#region src/panel.ts
-var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me = class extends J {
+var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne = class extends q {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.zones = [], this.scenes = [], this.busy = !1, this.colors = {
 			channels: {},
@@ -1279,16 +1291,16 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 			this.unsubscribe = await this.hass.connection.subscribeMessage((e) => {
 				e.type === "status" ? this.status = e : e.type === "colors" && (this.colors = e);
 			}, {
-				type: `${$}/subscribe`,
+				type: `${Q}/subscribe`,
 				colors: !0
 			}), [this.zones, this.scenes] = await Promise.all([this.call("zones"), this.call("scenes")]);
 		} catch (e) {
-			this.message = Ne(e);
+			this.message = $(e);
 		}
 	}
 	call(e, t = {}) {
 		return this.hass.connection.sendMessagePromise({
-			type: `${$}/${e}`,
+			type: `${Q}/${e}`,
 			...t
 		});
 	}
@@ -1297,7 +1309,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 		try {
 			await this.call(e, t), this.message = void 0;
 		} catch (e) {
-			this.message = Ne(e);
+			this.message = $(e);
 		} finally {
 			this.busy = !1;
 		}
@@ -1306,29 +1318,29 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 		history.pushState(null, "", e), window.dispatchEvent(new CustomEvent("location-changed"));
 	}
 	render() {
-		return I`
+		return F`
       <div class="toolbar">
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <div class="title">Hue Entertainment</div>
         ${this.renderStatePill()}
       </div>
       <div class="content">
-        ${this.status ? I`<div class="cards">
+        ${this.status ? F`<div class="cards">
                   ${this.renderBridge()} ${this.renderZone()} ${this.renderToggles()}
                 </div>
-                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}` : this.message ? this.renderMessage() : I`<div class="card">Loading…</div>`}
+                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}` : this.message ? this.renderMessage() : F`<div class="card">Loading…</div>`}
       </div>
     `;
 	}
 	renderStatePill() {
 		let e = this.status?.streaming;
-		if (!e) return z;
+		if (!e) return R;
 		let t = this.status?.live, n = e.state === "streaming" && t ? `Live · ${t.client}` : e.state === "streaming" ? `Streaming · ${Math.round(e.send_fps)}/s` : e.state === "reconnecting" ? "Reconnecting" : "Off";
-		return I`<span class="pill ${e.state}">${n}</span>`;
+		return F`<span class="pill ${e.state}">${n}</span>`;
 	}
 	renderBridge() {
 		let e = this.status.bridge;
-		return I`
+		return F`
       <div class="card">
         <div class="label">Bridge</div>
         <div class="row">
@@ -1337,9 +1349,9 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
         </div>
         <a
           class="link"
-          href=${je}
+          href=${Me}
           @click=${(e) => {
-			e.preventDefault(), this.navigate(je);
+			e.preventDefault(), this.navigate(Me);
 		}}
           >Manage in Devices and services</a
         >
@@ -1348,7 +1360,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 	}
 	renderZone() {
 		let e = this.status.zone?.id ?? "";
-		return I`
+		return F`
       <div class="card">
         <label class="label" for="zone">Entertainment area</label>
         <select
@@ -1357,12 +1369,12 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
           ?disabled=${this.busy || !this.zones.length}
           @change=${(e) => this.act("zone/select", { zone_id: e.target.value })}
         >
-          ${e ? z : I`<option value="" selected>Choose an area</option>`}
-          ${this.zones.map((t) => I`<option value=${t.id} ?selected=${t.id === e}>
+          ${e ? R : F`<option value="" selected>Choose an area</option>`}
+          ${this.zones.map((t) => F`<option value=${t.id} ?selected=${t.id === e}>
                 ${t.name} · ${t.channel_count} channels
               </option>`)}
         </select>
-        ${this.zones.length ? z : I`<div class="secondary small">
+        ${this.zones.length ? R : F`<div class="secondary small">
                 No entertainment areas. Create one in the Hue app under Settings,
                 Entertainment areas.
               </div>`}
@@ -1371,7 +1383,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 	}
 	renderToggles() {
 		let e = this.status, t = e.streaming.target_fps !== null;
-		return I`
+		return F`
       <div class="card toggles">
         ${this.toggle("Sync", t, !e.zone, (e) => this.act("sync", { on: e }))}
         ${this.toggle("Allow override", e.allow_override, !1, (e) => this.act("override", { allow: e }), "Starting sync may stop another app, like a Hue Sync Box")}
@@ -1379,7 +1391,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
     `;
 	}
 	toggle(e, t, n, r, i) {
-		return I`
+		return F`
       <label class="toggle-row" title=${i ?? ""}>
         <span>${e}</span>
         <input
@@ -1394,7 +1406,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 	}
 	renderPreview() {
 		let e = this.status, t = e.streaming.target_fps !== null, n = this.brightnessDraft ?? Math.round(this.colors.brightness * 100);
-		return I`
+		return F`
       <div class="card">
         <div class="row">
           <span class="value">Live preview</span>
@@ -1446,7 +1458,7 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 	}
 	renderScenes() {
 		let e = this.status;
-		return I`
+		return F`
       <hue-scene-panel
         .scenes=${this.scenes}
         .playing=${e.scene.id}
@@ -1459,13 +1471,20 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
 		})}
         @stop=${() => this.act("scene/stop")}
         @speed=${(e) => this.act("speed", { speed: e.detail.speed })}
+        @reload-scenes=${async () => {
+			try {
+				this.scenes = await this.call("scenes/reload"), this.message = void 0;
+			} catch (e) {
+				this.message = $(e);
+			}
+		}}
       ></hue-scene-panel>
     `;
 	}
 	renderMessage() {
 		let e = this.status?.live, t = this.message ?? this.status?.streaming.error;
-		return I`
-      ${e ? I`<div class="info">
+		return F`
+      ${e ? F`<div class="info">
               <span
                 >Live control by <b>${e.client}</b> since
                 ${(/* @__PURE__ */ new Date(e.since * 1e3)).toLocaleTimeString()}. Painting draws on
@@ -1474,8 +1493,8 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
               <button ?disabled=${this.busy} @click=${() => this.act("live/revoke")}>
                 Take over
               </button>
-            </div>` : z}
-      ${t ? I`<div class="message" role="alert">${t}</div>` : z}
+            </div>` : R}
+      ${t ? F`<div class="message" role="alert">${t}</div>` : R}
     `;
 	}
 	static {
@@ -1652,8 +1671,8 @@ var $ = "ha_hue_entertainment", je = `/config/integrations/integration/${$}`, Me
   `;
 	}
 };
-function Ne(e) {
+function $(e) {
 	return e.message ?? String(e);
 }
-customElements.define("ha-hue-entertainment-panel", Me);
+customElements.define("ha-hue-entertainment-panel", Ne);
 //#endregion

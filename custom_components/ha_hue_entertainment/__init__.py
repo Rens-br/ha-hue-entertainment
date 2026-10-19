@@ -99,7 +99,7 @@ async def async_setup_entry(
         app_name=APP_NAME,
     )
     engine.allow_override = entry.options.get(CONF_ALLOW_OVERRIDE, False)
-    engine.set_scenes(
+    await engine.set_scenes(
         await hass.async_add_executor_job(
             _load_scenes, Path(hass.config.path(DOMAIN, "scenes"))
         )
@@ -147,6 +147,17 @@ def _load_scenes(user_dir: Path) -> dict[str, Scene]:
     if user:
         _LOGGER.info("Loaded %d scene(s) from %s", len(user), user_dir)
     return {**builtin, **user}
+
+
+async def async_reload_scenes(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry
+) -> None:
+    """Reload scenes from disk and update the engine."""
+    await entry.runtime_data.set_scenes(
+        await hass.async_add_executor_job(
+            _load_scenes, Path(hass.config.path(DOMAIN, "scenes"))
+        )
+    )
 
 
 async def async_unload_entry(

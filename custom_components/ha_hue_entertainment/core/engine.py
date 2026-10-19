@@ -457,8 +457,9 @@ class HueSyncEngine:
 
     # ---- scenes ----------------------------------------------------------
 
-    def set_scenes(self, scenes: dict[str, Scene]) -> None:
+    async def set_scenes(self, scenes: dict[str, Scene]) -> None:
         self.scenes = scenes
+        await self._notify()
 
     async def play_scene(self, scene_id: str, params: dict | None = None) -> None:
         """Play a scene on the selected zone. Starting the stream is up to the caller."""

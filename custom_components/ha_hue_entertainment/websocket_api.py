@@ -43,6 +43,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_sync,
         ws_override,
         ws_scenes,
+        ws_reload_scenes,
         ws_play_scene,
         ws_stop_scene,
         ws_speed,
@@ -193,6 +194,33 @@ async def ws_play_scene(hass, engine, msg):
 async def ws_stop_scene(hass, engine, msg):
     await engine.stop_scene()
     return _snapshot(engine)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/scenes/reload", **ENTRY}
+)
+@_handler
+async def ws_reload_scenes(hass, engine, msg):
+    from . import async_reload_scenes  # avoid an import cycle
+
+    entry = next(
+        e
+        for e in hass.config_entries.async_loaded_entries(DOMAIN)
+        if e.runtime_data is engine
+    )
+    await async_reload_scenes(hass, entry)
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "description": s.description,
+            "author": s.author,
+            "builtin": s.builtin,
+            "duration": s.duration,
+            "parameters": s.parameters,
+        }
+        for s in sorted(engine.scenes.values(), key=lambda s: s.name.lower())
+    ]
 
 
 @websocket_api.websocket_command(
