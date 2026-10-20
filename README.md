@@ -22,9 +22,9 @@ The following features are currently planned to be added, but might change in th
 - **Custom light positioning:** Allowing to change the light positions from the panel, to be able to place them better, and enable more support for non-square rooms.
 - **Non-entertainment zone lights:** Allowing to add lights that are not in the entertainment zone, while they would be more restricted. (using normal light commands, which the bridge limits to about 10 updates a second)
 - **Additional scene features:** Brightness layers to control brightness from noise.
-- **Scene transitions**: fade into a new scene instead of switching instantly.
-- **Import and export** of scene files from the panel, later I want to make it easier to find and share scenes. 
-- **Multiple bridges** Allowing to add multiple bridges, allowing for larger entertainment zones if possible.
+- **Scene transitions:** fade into a new scene instead of switching instantly.
+- **Scene sharing:** A scene browser within home-assistant or another easier way to find and share scenes. 
+- **Multiple bridges:** Allowing to add multiple bridges, allowing for larger entertainment zones if possible.
 
 ## Requirements
 
@@ -161,8 +161,10 @@ lightning that strikes somewhere and rolls through the room).
 > Some scenes, like Thunderstorm, flash. If anyone is sensitive to flashing light, avoid them.
 
 **Your own scenes** are JSON files in `config/ha_hue_entertainment/scenes/` (the
-folder is created on setup). They are read at startup and can be reloaded from the planel, a scene with the same `id` as a built-in replaces it, and invalid
+folder is created on setup). They are read at startup and can be reloaded from the panel, a scene with the same `id` as a built-in replaces it, and invalid
 files are skipped with the reason in the log.
+
+New scenes can be uploaded from the panel, and user uploaded scenes can be deleted from here as well.
 
 A scene has settings (`parameters`) and `layers` that compute each light's
 colour from its position in the room and the time:

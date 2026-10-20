@@ -43,9 +43,12 @@ def async_register(hass: HomeAssistant) -> None:
         ws_sync,
         ws_override,
         ws_scenes,
+        ws_scenes_upload,
         ws_reload_scenes,
+        ws_delete_scene,
         ws_play_scene,
         ws_stop_scene,
+        ws_scene,
         ws_speed,
         ws_set_colors,
         ws_subscribe,
@@ -68,6 +71,14 @@ def _engine(hass: HomeAssistant, msg: dict) -> HueSyncEngine:
             else "Pass entry_id: zero or several bridges are set up"
         )
     return entries[0].runtime_data
+
+
+def _entry(hass: HomeAssistant, engine: HueSyncEngine):
+    return next(
+        e
+        for e in hass.config_entries.async_loaded_entries(DOMAIN)
+        if e.runtime_data is engine
+    )
 
 
 def _snapshot(engine: HueSyncEngine) -> dict[str, Any]:
@@ -95,6 +106,21 @@ def _command(admin: bool):
 
 _handler = _command(admin=True)  # changes the setup: admins only
 _user = _command(admin=False)  # live control and reading state: any logged-in user
+
+
+def _scene_list(engine: HueSyncEngine) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "description": s.description,
+            "author": s.author,
+            "builtin": s.builtin,
+            "duration": s.duration,
+            "parameters": s.parameters,
+        }
+        for s in sorted(engine.scenes.values(), key=lambda s: s.name.lower())
+    ]
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/status", **ENTRY})
@@ -141,30 +167,26 @@ async def ws_sync(hass, engine, msg):
 async def ws_override(hass, engine, msg):
     from . import async_set_allow_override  # avoid an import cycle
 
-    entry = next(
-        e
-        for e in hass.config_entries.async_loaded_entries(DOMAIN)
-        if e.runtime_data is engine
-    )
-    await async_set_allow_override(hass, entry, msg["allow"])
+    await async_set_allow_override(hass, _entry(hass, engine), msg["allow"])
     return _snapshot(engine)
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/scenes", **ENTRY})
 @_handler
 async def ws_scenes(hass, engine, msg):
-    return [
-        {
-            "id": s.id,
-            "name": s.name,
-            "description": s.description,
-            "author": s.author,
-            "builtin": s.builtin,
-            "duration": s.duration,
-            "parameters": s.parameters,
-        }
-        for s in sorted(engine.scenes.values(), key=lambda s: s.name.lower())
-    ]
+    return _scene_list(engine)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/scene",
+        vol.Required("scene"): str,
+        **ENTRY,
+    }
+)
+@_handler
+async def ws_scene(hass, engine, msg):
+    return engine.get_scene(msg["scene"]).raw
 
 
 @websocket_api.websocket_command(
@@ -197,30 +219,44 @@ async def ws_stop_scene(hass, engine, msg):
 
 
 @websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/scenes/upload",
+        vol.Required("scene"): dict,
+        **ENTRY,
+    }
+)
+@_handler
+async def ws_scenes_upload(hass, engine, msg):
+    from . import async_upload_scene  # avoid an import cycle
+
+    await async_upload_scene(hass, _entry(hass, engine), msg["scene"])
+    return _scene_list(engine)
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): f"{DOMAIN}/scenes/reload", **ENTRY}
 )
 @_handler
 async def ws_reload_scenes(hass, engine, msg):
     from . import async_reload_scenes  # avoid an import cycle
 
-    entry = next(
-        e
-        for e in hass.config_entries.async_loaded_entries(DOMAIN)
-        if e.runtime_data is engine
-    )
-    await async_reload_scenes(hass, entry)
-    return [
-        {
-            "id": s.id,
-            "name": s.name,
-            "description": s.description,
-            "author": s.author,
-            "builtin": s.builtin,
-            "duration": s.duration,
-            "parameters": s.parameters,
-        }
-        for s in sorted(engine.scenes.values(), key=lambda s: s.name.lower())
-    ]
+    await async_reload_scenes(hass, _entry(hass, engine))
+    return _scene_list(engine)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/scenes/delete",
+        vol.Required("scene_id"): str,
+        **ENTRY,
+    }
+)
+@_handler
+async def ws_delete_scene(hass, engine, msg):
+    from . import async_delete_scene  # avoid an import cycle
+
+    await async_delete_scene(hass, _entry(hass, engine), msg["scene_id"])
+    return _scene_list(engine)
 
 
 @websocket_api.websocket_command(

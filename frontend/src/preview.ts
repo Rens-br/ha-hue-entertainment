@@ -275,14 +275,14 @@ class HueRoomPreview extends LitElement {
       stroke: var(--divider-color);
       stroke-width: 0.75;
     }
+    .floor {
+      fill: var(--secondary-background-color, rgba(127, 127, 127, 0.12));
+    }
     .wall.left {
       fill: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
     }
     .wall.front {
       fill: var(--primary-background-color, rgba(127, 127, 127, 0.04));
-    }
-    .floor {
-      fill: var(--secondary-background-color, rgba(127, 127, 127, 0.12));
     }
     .tv {
       fill: var(--secondary-text-color);

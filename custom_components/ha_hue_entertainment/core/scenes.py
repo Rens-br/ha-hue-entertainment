@@ -87,12 +87,13 @@ def parse_color(value) -> Color:
 class Scene:
     id: str
     name: str
-    raw: dict  # the validated JSON, for export
+    raw: dict
     parameters: dict[str, dict] = field(default_factory=dict)
     duration: float | None = None
     description: str = ""
     author: str = ""
     builtin: bool = False
+    file: Path | None = None
 
     def defaults(self) -> dict:
         return {name: p["default"] for name, p in self.parameters.items()}
@@ -178,6 +179,7 @@ def load_scene_dir(
             scene = load_scene(
                 json.loads(file.read_text()), source=file.name, builtin=builtin
             )
+            scene.file = file
         except (OSError, json.JSONDecodeError) as e:
             errors.append(f"{file.name}: {e}")
             continue

@@ -47,6 +47,18 @@ class HueEntertainmentPanel extends LitElement {
     this.unsubscribe = undefined;
   }
 
+  downloadJson(filename: string, data: unknown) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   private async connect() {
     try {
       this.unsubscribe = await this.hass!.connection.subscribeMessage<
@@ -108,7 +120,7 @@ class HueEntertainmentPanel extends LitElement {
                 ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}`
             : this.message
               ? this.renderMessage()
-              : html`<div class="card">Loading…</div>`
+              : html`<ha-card><div class="card-content">Loading…</div></ha-card>`
         }
       </div>
     `;
@@ -132,56 +144,60 @@ class HueEntertainmentPanel extends LitElement {
   private renderBridge() {
     const bridge = this.status!.bridge;
     return html`
-      <div class="card">
-        <div class="label">Bridge</div>
-        <div class="row">
-          <span class="value">${bridge?.name ?? "Not paired"}</span>
-          <span class="secondary">${bridge?.host ?? ""}</span>
-        </div>
-        <a
-          class="link"
-          href=${INTEGRATION_PAGE}
-          @click=${(e: Event) => {
-            e.preventDefault();
-            this.navigate(INTEGRATION_PAGE);
-          }}
-          >Manage in Devices and services</a
-        >
-      </div>
+      <ha-card
+        ><div class="card-content">
+          <div class="label">Bridge</div>
+          <div class="row">
+            <span class="value">${bridge?.name ?? "Not paired"}</span>
+            <span class="secondary">${bridge?.host ?? ""}</span>
+          </div>
+          <a
+            class="link"
+            href=${INTEGRATION_PAGE}
+            @click=${(e: Event) => {
+              e.preventDefault();
+              this.navigate(INTEGRATION_PAGE);
+            }}
+            >Manage in Devices and services</a
+          >
+        </div></ha-card
+      >
     `;
   }
 
   private renderZone() {
     const current = this.status!.zone?.id ?? "";
     return html`
-      <div class="card">
-        <label class="label" for="zone">Entertainment area</label>
-        <select
-          id="zone"
-          .value=${current}
-          ?disabled=${this.busy || !this.zones.length}
-          @change=${(e: Event) =>
-            this.act("zone/select", {
-              zone_id: (e.target as HTMLSelectElement).value,
-            })}
-        >
-          ${current ? nothing : html`<option value="" selected>Choose an area</option>`}
-          ${this.zones.map(
-            (z) =>
-              html`<option value=${z.id} ?selected=${z.id === current}>
-                ${z.name} · ${z.channel_count} channels
-              </option>`,
-          )}
-        </select>
-        ${
-          this.zones.length
-            ? nothing
-            : html`<div class="secondary small">
-                No entertainment areas. Create one in the Hue app under Settings,
-                Entertainment areas.
-              </div>`
-        }
-      </div>
+      <ha-card
+        ><div class="card-content">
+          <label class="label" for="zone">Entertainment area</label>
+          <select
+            id="zone"
+            .value=${current}
+            ?disabled=${this.busy || !this.zones.length}
+            @change=${(e: Event) =>
+              this.act("zone/select", {
+                zone_id: (e.target as HTMLSelectElement).value,
+              })}
+          >
+            ${current ? nothing : html`<option value="" selected>Choose an area</option>`}
+            ${this.zones.map(
+              (z) =>
+                html`<option value=${z.id} ?selected=${z.id === current}>
+                  ${z.name} · ${z.channel_count} channels
+                </option>`,
+            )}
+          </select>
+          ${
+            this.zones.length
+              ? nothing
+              : html`<div class="secondary small">
+                  No entertainment areas. Create one in the Hue app under Settings,
+                  Entertainment areas.
+                </div>`
+          }
+        </div></ha-card
+      >
     `;
   }
 
@@ -189,16 +205,18 @@ class HueEntertainmentPanel extends LitElement {
     const s = this.status!;
     const syncing = s.streaming.target_fps !== null;
     return html`
-      <div class="card toggles">
-        ${this.toggle("Sync", syncing, !s.zone, (on) => this.act("sync", { on }))}
-        ${this.toggle(
-          "Allow override",
-          s.allow_override,
-          false,
-          (allow) => this.act("override", { allow }),
-          "Starting sync may stop another app, like a Hue Sync Box",
-        )}
-      </div>
+      <ha-card
+        ><div class="card-content toggles">
+          ${this.toggle("Sync", syncing, !s.zone, (on) => this.act("sync", { on }))}
+          ${this.toggle(
+            "Allow override",
+            s.allow_override,
+            false,
+            (allow) => this.act("override", { allow }),
+            "Starting sync may stop another app, like a Hue Sync Box",
+          )}
+        </div></ha-card
+      >
     `;
   }
 
@@ -212,13 +230,11 @@ class HueEntertainmentPanel extends LitElement {
     return html`
       <label class="toggle-row" title=${hint ?? ""}>
         <span>${label}</span>
-        <input
-          type="checkbox"
-          role="switch"
+        <ha-switch
           .checked=${checked}
           ?disabled=${disabled || this.busy}
           @change=${(e: Event) => onChange((e.target as HTMLInputElement).checked)}
-        />
+        ></ha-switch>
       </label>
     `;
   }
@@ -228,64 +244,65 @@ class HueEntertainmentPanel extends LitElement {
     const syncing = s.streaming.target_fps !== null;
     const brightness = this.brightnessDraft ?? Math.round(this.colors.brightness * 100);
     return html`
-      <div class="card">
-        <div class="row">
-          <span class="value">Live preview</span>
-          <span class="secondary small">
-            ${
-              syncing
-                ? "Select a light to paint it."
-                : "Sync is off. Showing the colours sync starts with."
-            }
-          </span>
-        </div>
-        <hue-room-preview
-          .channels=${s.zone_layout?.channels ?? []}
-          .lightInfo=${s.zone_layout?.lights ?? []}
-          .colors=${this.colors.channels}
-          ?active=${syncing}
-          @paint=${(e: CustomEvent<{ channels: number[] }>) =>
-            this.act("colors/set", {
-              channels: Object.fromEntries(
-                e.detail.channels.map((id) => [id, this.paintColor]),
-              ),
-              // draw on top of a running scene or live control instead of replacing it
-              overlay: s.scene.id !== null || s.live !== null,
-            })}
-        ></hue-room-preview>
-        <div class="row controls">
-          <label class="row">
-            <input
-              type="color"
-              .value=${this.paintColor}
-              @input=${(e: Event) =>
-                (this.paintColor = (e.target as HTMLInputElement).value)}
-            />
-            <span class="secondary small">Paint colour</span>
-          </label>
-          <label class="row grow">
-            <span class="secondary small">Brightness</span>
-            <input
-              class="grow"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              .value=${String(brightness)}
-              @input=${(e: Event) =>
-                (this.brightnessDraft = Number((e.target as HTMLInputElement).value))}
-              @change=${async (e: Event) => {
-                await this.act("colors/set", {
-                  brightness: Number((e.target as HTMLInputElement).value) / 100,
-                  start: false,
-                });
-                this.brightnessDraft = undefined;
-              }}
-            />
-            <span class="small">${brightness}%</span>
-          </label>
-        </div>
-      </div>
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">Live preview</span>
+            <span class="secondary small">
+              ${
+                syncing
+                  ? "Select a light to paint it."
+                  : "Sync is off. Showing the colours sync starts with."
+              }
+            </span>
+          </div>
+          <hue-room-preview
+            .channels=${s.zone_layout?.channels ?? []}
+            .lightInfo=${s.zone_layout?.lights ?? []}
+            .colors=${this.colors.channels}
+            ?active=${syncing}
+            @paint=${(e: CustomEvent<{ channels: number[] }>) =>
+              this.act("colors/set", {
+                channels: Object.fromEntries(
+                  e.detail.channels.map((id) => [id, this.paintColor]),
+                ),
+                // draw on top of a running scene or live control instead of replacing it
+                overlay: s.scene.id !== null || s.live !== null,
+              })}
+          ></hue-room-preview>
+          <div class="row controls">
+            <label class="row">
+              <input
+                type="color"
+                .value=${this.paintColor}
+                @input=${(e: Event) =>
+                  (this.paintColor = (e.target as HTMLInputElement).value)}
+              />
+              <span class="secondary small">Paint colour</span>
+            </label>
+            <label class="row grow">
+              <span class="secondary small">Brightness</span>
+              <ha-slider
+                class="grow"
+                min="0"
+                max="100"
+                step="1"
+                .value=${brightness}
+                @input=${(e: Event) =>
+                  (this.brightnessDraft = Number((e.target as HTMLInputElement).value))}
+                @change=${async (e: Event) => {
+                  await this.act("colors/set", {
+                    brightness: Number((e.target as HTMLInputElement).value) / 100,
+                    start: false,
+                  });
+                  this.brightnessDraft = undefined;
+                }}
+              ></ha-slider>
+              <span class="small">${brightness}%</span>
+            </label>
+          </div>
+        </div></ha-card
+      >
     `;
   }
 
@@ -314,6 +331,36 @@ class HueEntertainmentPanel extends LitElement {
             this.message = errorText(err);
           }
         }}
+        @download-scene=${(e: CustomEvent<{ scene: string }>) => {
+          this.call<Record<string, unknown>>("scene", { scene: e.detail.scene })
+            .then((scene) => {
+              this.downloadJson(`${e.detail.scene}.json`, scene);
+            })
+            .catch((err) => {
+              this.message = errorText(err);
+            });
+        }}
+        @upload-scene=${async (e: CustomEvent<{ scene: Record<string, unknown> }>) => {
+          try {
+            this.scenes = await this.call<SceneInfo[]>("scenes/upload", {
+              scene: e.detail.scene,
+            });
+            this.message = undefined;
+          } catch (err) {
+            this.message = errorText(err);
+          }
+        }}
+        @delete-scene=${async (e: CustomEvent<{ scene: string }>) => {
+          if (!confirm(`Delete scene ${e.detail.scene}?`)) return;
+          try {
+            this.scenes = await this.call<SceneInfo[]>("scenes/delete", {
+              scene_id: e.detail.scene,
+            });
+            this.message = undefined;
+          } catch (err) {
+            this.message = errorText(err);
+          }
+        }}
       ></hue-scene-panel>
     `;
   }
@@ -324,15 +371,20 @@ class HueEntertainmentPanel extends LitElement {
     return html`
       ${
         live
-          ? html`<div class="info">
+          ? html`<div class="live-bar">
               <span
                 >Live control by <b>${live.client}</b> since
                 ${new Date(live.since * 1000).toLocaleTimeString()}. Painting draws on
                 top.</span
               >
-              <button ?disabled=${this.busy} @click=${() => this.act("live/revoke")}>
+              <ha-button
+                appearance="accent"
+                size="s"
+                ?disabled=${this.busy}
+                @click=${() => this.act("live/revoke")}
+              >
                 Take over
-              </button>
+              </ha-button>
             </div>`
           : nothing
       }
@@ -347,7 +399,48 @@ class HueEntertainmentPanel extends LitElement {
       background: var(--primary-background-color);
       color: var(--primary-text-color);
     }
+    .card-content {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .row,
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .value {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .secondary {
+      color: var(--secondary-text-color);
+    }
+    .small {
+      font-size: 13px;
+    }
+    select {
+      font: inherit;
+      color: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--secondary-background-color, transparent);
+    }
+    input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
     .toolbar {
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -355,6 +448,7 @@ class HueEntertainmentPanel extends LitElement {
       padding: 0 12px;
       background: var(--app-header-background-color, var(--primary-color));
       color: var(--app-header-text-color, var(--text-primary-color));
+      border-bottom: var(--app-header-border-bottom);
       font-size: 20px;
     }
     .title {
@@ -386,48 +480,14 @@ class HueEntertainmentPanel extends LitElement {
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
     }
-    .card {
-      background: var(--card-background-color, #fff);
-      border-radius: var(--ha-card-border-radius, 12px);
-      border: 1px solid var(--divider-color);
-      padding: 16px;
-      display: grid;
-      gap: 10px;
-      align-content: start;
-    }
     .label {
       font-size: 13px;
       color: var(--secondary-text-color);
-    }
-    .row,
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .value {
-      font-size: 16px;
-      font-weight: 500;
-    }
-    .secondary {
-      color: var(--secondary-text-color);
-    }
-    .small {
-      font-size: 13px;
     }
     .link {
       font-size: 13px;
       color: var(--primary-color);
       text-decoration: none;
-    }
-    select {
-      font: inherit;
-      color: inherit;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: var(--secondary-background-color, transparent);
     }
     .toggles {
       gap: 14px;
@@ -435,56 +495,14 @@ class HueEntertainmentPanel extends LitElement {
     .toggle-row span {
       font-size: 15px;
     }
-    input[role="switch"] {
-      appearance: none;
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      background: var(--disabled-color, #bdbdbd);
-      position: relative;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    input[role="switch"]::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #fff;
-      transition: left 0.15s;
-    }
-    input[role="switch"]:checked {
-      background: var(--primary-color);
-    }
-    input[role="switch"]:checked::after {
-      left: 18px;
-    }
-    input[role="switch"]:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
     .controls {
       flex-wrap: wrap;
     }
     .grow {
       flex: 1;
+      min-width: 0;
     }
-    input[type="color"] {
-      width: 40px;
-      height: 28px;
-      padding: 0;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      background: none;
-      cursor: pointer;
-    }
-    input[type="range"] {
-      accent-color: var(--primary-color);
-    }
-    .info {
+    .live-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -494,21 +512,16 @@ class HueEntertainmentPanel extends LitElement {
       background: rgba(3, 169, 244, 0.12);
       border: 1px solid var(--info-color, #039be5);
     }
-    .info button {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--primary-color);
-      background: var(--primary-color);
-      color: var(--text-primary-color, #fff);
-      cursor: pointer;
-    }
     .message {
       padding: 10px 14px;
       border-radius: 8px;
       background: rgba(255, 166, 0, 0.15);
       border: 1px solid var(--warning-color, #ffa600);
+    }
+    ha-button {
+      --ha-icon-button-size: 24px;
+      --mdc-icon-button-size: 24px;
+      --mdc-icon-size: 16px;
     }
   `;
 }

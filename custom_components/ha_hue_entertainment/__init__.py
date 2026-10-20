@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from .const import (
 )
 from .core.config import Settings
 from .core.engine import HueSyncEngine
-from .core.scenes import Scene, load_scene_dir
+from .core.scenes import Scene, load_scene, load_scene_dir
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -149,6 +150,22 @@ def _load_scenes(user_dir: Path) -> dict[str, Scene]:
     return {**builtin, **user}
 
 
+async def async_upload_scene(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, data: dict
+) -> None:
+    """Upload a scene to disk and reload the engine."""
+    user_dir = Path(hass.config.path(DOMAIN, "scenes"))
+    scene = load_scene(data, source="Scene upload")
+    scene_file = user_dir / f"{scene.id}.json"
+
+    def write() -> None:
+        user_dir.mkdir(parents=True, exist_ok=True)
+        scene_file.write_text(json.dumps(scene.raw, indent=2), encoding="utf-8")
+
+    await hass.async_add_executor_job(write)
+    await async_reload_scenes(hass, entry)
+
+
 async def async_reload_scenes(
     hass: HomeAssistant, entry: HueEntertainmentConfigEntry
 ) -> None:
@@ -158,6 +175,17 @@ async def async_reload_scenes(
             _load_scenes, Path(hass.config.path(DOMAIN, "scenes"))
         )
     )
+
+
+async def async_delete_scene(
+    hass: HomeAssistant, entry: HueEntertainmentConfigEntry, scene_id: str
+) -> None:
+    """Delete a user scene's file and reload."""
+    scene = entry.runtime_data.get_scene(scene_id)
+    if scene.builtin or scene.file is None:
+        raise ValueError("Built-in scenes can't be deleted")
+    await hass.async_add_executor_job(lambda: scene.file.unlink(missing_ok=True))
+    await async_reload_scenes(hass, entry)
 
 
 async def async_unload_entry(

@@ -461,14 +461,18 @@ class HueSyncEngine:
         self.scenes = scenes
         await self._notify()
 
+    def get_scene(self, scene_id: str) -> Scene:
+        if scene_id not in self.scenes:
+            raise ValueError(f"unknown scene {scene_id!r}")
+        return self.scenes[scene_id]
+
     async def play_scene(self, scene_id: str, params: dict | None = None) -> None:
         """Play a scene on the selected zone. Starting the stream is up to the caller."""
         if not self.zone:
             raise BridgeError("Select an entertainment zone first")
-        if scene_id not in self.scenes:
-            raise ValueError(f"unknown scene {scene_id!r}")
-        run = SceneRun(self.scenes[scene_id], self._positions(), params)
-        self._lose_live(f"scene {self.scenes[scene_id].name!r} was started")
+        scene = self.get_scene(scene_id)
+        run = SceneRun(scene, self._positions(), params)
+        self._lose_live(f"scene {scene.name!r} was started")
         self.scene_run = run
         self._render_at = None
         await self._notify()

@@ -762,14 +762,14 @@ var Oe = class extends q {
       stroke: var(--divider-color);
       stroke-width: 0.75;
     }
+    .floor {
+      fill: var(--secondary-background-color, rgba(127, 127, 127, 0.12));
+    }
     .wall.left {
       fill: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
     }
     .wall.front {
       fill: var(--primary-background-color, rgba(127, 127, 127, 0.04));
-    }
-    .floor {
-      fill: var(--secondary-background-color, rgba(127, 127, 127, 0.12));
     }
     .tv {
       fill: var(--secondary-text-color);
@@ -942,6 +942,25 @@ var ke = class extends q {
 	reloadScenes() {
 		this.fire("reload-scenes");
 	}
+	downloadScene(e) {
+		this.fire("download-scene", { scene: e.id });
+	}
+	uploadScene() {
+		(this.shadowRoot?.getElementById("scene-upload"))?.click();
+	}
+	handleUpload(e) {
+		let t = e.target;
+		if (!t.files?.length) return;
+		let n = t.files[0], r = new FileReader();
+		r.onload = () => {
+			try {
+				let e = JSON.parse(r.result);
+				this.fire("upload-scene", { scene: e });
+			} catch (e) {
+				console.error("Failed to parse scene file", e);
+			}
+		}, r.readAsText(n);
+	}
 	render() {
 		let e = this.current;
 		return F`
@@ -953,98 +972,140 @@ var ke = class extends q {
 	renderList() {
 		let e = this.speedDraft ?? this.speed;
 		return F`
-      <div class="card">
-        <div class="row">
-          <span class="value">Scenes</span>
-          <span>
-            <button
-              @click=${(e) => {
+      <input
+        type="file"
+        id="scene-upload"
+        accept=".json"
+        style="display: none"
+        @change=${(e) => this.handleUpload(e)}
+      />
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">Scenes</span>
+            <span>
+              <ha-button
+                appearance="plain"
+                variant="secondary"
+                size="xs"
+                @click=${(e) => {
 			e.stopPropagation(), this.reloadScenes();
 		}}
-            >
-              Reload Scenes
-            </button>
-            <span class="secondary small">${this.scenes.length} available</span>
-          </span>
-        </div>
-        <div class="list">
-          ${this.scenes.map((e) => {
+              >
+                <ha-icon icon="mdi:reload"></ha-icon>
+              </ha-button>
+              <ha-button
+                appearance="filled"
+                variant="brand"
+                size="xs"
+                @click=${(e) => {
+			e.stopPropagation(), this.uploadScene();
+		}}
+              >
+                <ha-icon icon="mdi:upload"></ha-icon>
+                Upload Scene
+              </ha-button>
+            </span>
+          </div>
+          <div class="list">
+            ${this.scenes.map((e) => {
 			let t = e.id === this.playing;
 			return F`
-              <div
-                class="scene ${t ? "on" : ""} ${e.id === this.current?.id ? "selected" : ""}"
-                @click=${() => this.selected = e.id}
-              >
-                <div class="info">
-                  <div class="name">${e.name}</div>
-                  ${e.description ? F`<div class="secondary small">${e.description}</div>` : R}
-                </div>
-                <span class="tag">${e.builtin ? "built-in" : "yours"}</span>
-                <button
-                  class=${t ? "stop" : "play"}
-                  ?disabled=${this.disabled}
-                  @click=${(n) => {
+                <div
+                  class="scene ${t ? "on" : ""} ${e.id === this.current?.id ? "selected" : ""}"
+                  @click=${() => this.selected = e.id}
+                >
+                  <div class="scene-text">
+                    <div class="name">${e.name}</div>
+                    ${e.description ? F`<div class="secondary small">${e.description}</div>` : R}
+                  </div>
+                  <span class="tag">${e.builtin ? "built-in" : "yours"}</span>
+                  <ha-button
+                    size="xs"
+                    appearance=${t ? "accent" : "outlined"}
+                    ?disabled=${this.disabled}
+                    @click=${(n) => {
 				n.stopPropagation(), t ? this.fire("stop") : this.play(e, this.drafts[e.id] ? this.values(e) : void 0);
 			}}
-                >
-                  ${t ? "Stop" : "Play"}
-                </button>
-              </div>
-            `;
+                  >
+                    ${t ? "Stop" : "Play"}
+                  </ha-button>
+                </div>
+              `;
 		})}
-        </div>
-        <label class="row speed">
-          <span class="secondary small">Speed</span>
-          <input
-            type="range"
-            min="0.1"
-            max="4"
-            step="0.1"
-            .value=${String(e)}
-            ?disabled=${this.disabled}
-            @input=${(e) => this.speedDraft = Number(e.target.value)}
-            @change=${(e) => {
+          </div>
+          <label class="row speed">
+            <span class="secondary small">Speed</span>
+            <ha-slider
+              min="0.1"
+              max="4"
+              step="0.1"
+              .value=${e}
+              ?disabled=${this.disabled}
+              @input=${(e) => this.speedDraft = Number(e.target.value)}
+              @change=${(e) => {
 			this.fire("speed", { speed: Number(e.target.value) }), this.speedDraft = void 0;
 		}}
-          />
-          <span class="small">${e.toFixed(1)}×</span>
-        </label>
-      </div>
+            ></ha-slider>
+            <span class="small">${e.toFixed(1)}×</span>
+          </label>
+        </div></ha-card
+      >
     `;
 	}
 	renderForm(e) {
 		let t = Object.entries(e.parameters), n = this.values(e);
 		return F`
-      <div class="card">
-        <div class="row">
-          <span class="value">${e.name}</span>
-          <span class="secondary small">
-            ${e.author ? `by ${e.author}` : ""}
-            ${e.duration ? ` · plays ${e.duration} s` : ""}
-          </span>
-        </div>
-        ${t.length ? F`<div class="form">
-                ${t.map(([t, r]) => this.field(e, t, r, n[t]))}
-              </div>` : F`<div class="secondary small">This scene has no settings.</div>`}
-        <div class="row actions">
-          <button
-            ?disabled=${!this.drafts[e.id]}
-            @click=${() => {
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">${e.name}</span>
+            <div class="row actions">
+              <ha-icon-button
+                .label=${"Download"}
+                @click=${() => this.downloadScene(e)}
+              >
+                <ha-icon icon="mdi:download"></ha-icon>
+              </ha-icon-button>
+              ${e.builtin ? R : F`
+                      <ha-button
+                        size="xs"
+                        appearance="plain"
+                        variant="danger"
+                        @click=${() => this.fire("delete-scene", { scene: e.id })}
+                      >
+                        <ha-icon icon="mdi:delete"></ha-icon>
+                        Delete</ha-button
+                      >
+                    `}
+            </div>
+          </div>
+          ${t.length ? F`<div class="form">
+                  ${t.map(([t, r]) => this.field(e, t, r, n[t]))}
+                </div>` : F`<div class="secondary small">This scene has no settings.</div>`}
+          <div class="row actions">
+            <ha-button
+              size="s"
+              appearance="plain"
+              ?disabled=${!this.drafts[e.id]}
+              @click=${() => {
 			let t = { ...this.drafts };
 			delete t[e.id], this.drafts = t;
 		}}
-          >
-            Reset
-          </button>
-          <button
-            class="primary"
-            ?disabled=${this.disabled}
-            @click=${() => this.play(e, n)}
-          >
-            ${e.id === this.playing ? "Apply" : "Play with these"}
-          </button>
-        </div>
-      </div>
+            >
+              Reset
+            </ha-button>
+            <ha-button
+              size="s"
+              appearance="accent"
+              ?disabled=${this.disabled}
+              @click=${() => this.play(e, n)}
+            >
+              ${e.id === this.playing ? "Apply" : "Play with these"}
+            </ha-button>
+          </div>
+        </div></ha-card
+      >
     `;
 	}
 	field(e, t, n, r) {
@@ -1064,14 +1125,13 @@ var ke = class extends q {
 			return F`
         <label class="field">
           <span>${i}</span>
-          <input
-            type="range"
+          <ha-slider
             min=${t}
             max=${o}
             step=${(o - t) / 100}
-            .value=${String(e)}
+            .value=${e}
             @input=${(e) => a(Number(e.target.value))}
-          />
+          ></ha-slider>
           <span class="small num">${je(e)}</span>
         </label>
       `;
@@ -1080,12 +1140,10 @@ var ke = class extends q {
 		return o.length === 2 && o.every((e) => typeof e == "boolean") ? F`
         <label class="field">
           <span>${i}</span>
-          <input
-            type="checkbox"
-            role="switch"
+          <ha-switch
             .checked=${!!r}
             @change=${(e) => a(e.target.checked)}
-          />
+          ></ha-switch>
         </label>
       ` : F`
       <label class="field">
@@ -1100,19 +1158,11 @@ var ke = class extends q {
 	}
 	static {
 		this.styles = o`
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: var(--card-background-color, #fff);
-      border-radius: var(--ha-card-border-radius, 12px);
-      border: 1px solid var(--divider-color);
+    .card-content {
       padding: 16px;
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 12px;
-      align-content: start;
     }
     .row,
     .field {
@@ -1130,6 +1180,28 @@ var ke = class extends q {
     }
     .small {
       font-size: 13px;
+    }
+    select {
+      font: inherit;
+      color: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--secondary-background-color, transparent);
+    }
+    input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
     }
     .list {
       display: grid;
@@ -1150,7 +1222,7 @@ var ke = class extends q {
       color: var(--primary-color);
       font-weight: 500;
     }
-    .info {
+    .scene-text {
       flex: 1;
       min-width: 0;
     }
@@ -1158,28 +1230,15 @@ var ke = class extends q {
       font-size: 12px;
       color: var(--secondary-text-color);
     }
-    button {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: none;
-      color: var(--primary-text-color);
-      cursor: pointer;
+    ha-icon-button,
+    ha-button {
+      --ha-icon-button-size: 24px;
+      --mdc-icon-button-size: 24px;
+      --mdc-icon-size: 16px;
     }
-    button.primary,
-    button.stop {
-      background: var(--primary-color);
-      border-color: var(--primary-color);
-      color: var(--text-primary-color, #fff);
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .speed input {
+    .speed ha-slider {
       flex: 1;
+      min-width: 0;
     }
     .form {
       display: grid;
@@ -1191,8 +1250,9 @@ var ke = class extends q {
       text-transform: capitalize;
       min-width: 90px;
     }
-    .field input[type="range"] {
+    .field ha-slider {
       flex: 1;
+      min-width: 0;
     }
     .num {
       min-width: 36px;
@@ -1200,52 +1260,7 @@ var ke = class extends q {
     }
     .actions {
       justify-content: flex-end;
-    }
-    input[type="range"] {
-      accent-color: var(--primary-color);
-    }
-    input[type="color"] {
-      width: 44px;
-      height: 28px;
-      padding: 0;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      background: none;
-      cursor: pointer;
-    }
-    select {
-      font: inherit;
-      color: inherit;
-      padding: 6px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: var(--secondary-background-color, transparent);
-    }
-    input[role="switch"] {
-      appearance: none;
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      background: var(--disabled-color, #bdbdbd);
-      position: relative;
-      cursor: pointer;
-    }
-    input[role="switch"]::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #fff;
-      transition: left 0.15s;
-    }
-    input[role="switch"]:checked {
-      background: var(--primary-color);
-    }
-    input[role="switch"]:checked::after {
-      left: 18px;
+      gap: 8px;
     }
   `;
 	}
@@ -1285,6 +1300,10 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.unsubscribe?.(), this.unsubscribe = void 0;
+	}
+	downloadJson(e, t) {
+		let n = new Blob([JSON.stringify(t, null, 2)], { type: "application/json" }), r = URL.createObjectURL(n), i = document.createElement("a");
+		i.href = r, i.download = e, i.click(), URL.revokeObjectURL(r);
 	}
 	async connect() {
 		try {
@@ -1328,7 +1347,7 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
         ${this.status ? F`<div class="cards">
                   ${this.renderBridge()} ${this.renderZone()} ${this.renderToggles()}
                 </div>
-                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}` : this.message ? this.renderMessage() : F`<div class="card">Loading…</div>`}
+                ${this.renderMessage()} ${this.renderPreview()} ${this.renderScenes()}` : this.message ? this.renderMessage() : F`<ha-card><div class="card-content">Loading…</div></ha-card>`}
       </div>
     `;
 	}
@@ -1341,119 +1360,124 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
 	renderBridge() {
 		let e = this.status.bridge;
 		return F`
-      <div class="card">
-        <div class="label">Bridge</div>
-        <div class="row">
-          <span class="value">${e?.name ?? "Not paired"}</span>
-          <span class="secondary">${e?.host ?? ""}</span>
-        </div>
-        <a
-          class="link"
-          href=${Me}
-          @click=${(e) => {
+      <ha-card
+        ><div class="card-content">
+          <div class="label">Bridge</div>
+          <div class="row">
+            <span class="value">${e?.name ?? "Not paired"}</span>
+            <span class="secondary">${e?.host ?? ""}</span>
+          </div>
+          <a
+            class="link"
+            href=${Me}
+            @click=${(e) => {
 			e.preventDefault(), this.navigate(Me);
 		}}
-          >Manage in Devices and services</a
-        >
-      </div>
+            >Manage in Devices and services</a
+          >
+        </div></ha-card
+      >
     `;
 	}
 	renderZone() {
 		let e = this.status.zone?.id ?? "";
 		return F`
-      <div class="card">
-        <label class="label" for="zone">Entertainment area</label>
-        <select
-          id="zone"
-          .value=${e}
-          ?disabled=${this.busy || !this.zones.length}
-          @change=${(e) => this.act("zone/select", { zone_id: e.target.value })}
-        >
-          ${e ? R : F`<option value="" selected>Choose an area</option>`}
-          ${this.zones.map((t) => F`<option value=${t.id} ?selected=${t.id === e}>
-                ${t.name} · ${t.channel_count} channels
-              </option>`)}
-        </select>
-        ${this.zones.length ? R : F`<div class="secondary small">
-                No entertainment areas. Create one in the Hue app under Settings,
-                Entertainment areas.
-              </div>`}
-      </div>
+      <ha-card
+        ><div class="card-content">
+          <label class="label" for="zone">Entertainment area</label>
+          <select
+            id="zone"
+            .value=${e}
+            ?disabled=${this.busy || !this.zones.length}
+            @change=${(e) => this.act("zone/select", { zone_id: e.target.value })}
+          >
+            ${e ? R : F`<option value="" selected>Choose an area</option>`}
+            ${this.zones.map((t) => F`<option value=${t.id} ?selected=${t.id === e}>
+                  ${t.name} · ${t.channel_count} channels
+                </option>`)}
+          </select>
+          ${this.zones.length ? R : F`<div class="secondary small">
+                  No entertainment areas. Create one in the Hue app under Settings,
+                  Entertainment areas.
+                </div>`}
+        </div></ha-card
+      >
     `;
 	}
 	renderToggles() {
 		let e = this.status, t = e.streaming.target_fps !== null;
 		return F`
-      <div class="card toggles">
-        ${this.toggle("Sync", t, !e.zone, (e) => this.act("sync", { on: e }))}
-        ${this.toggle("Allow override", e.allow_override, !1, (e) => this.act("override", { allow: e }), "Starting sync may stop another app, like a Hue Sync Box")}
-      </div>
+      <ha-card
+        ><div class="card-content toggles">
+          ${this.toggle("Sync", t, !e.zone, (e) => this.act("sync", { on: e }))}
+          ${this.toggle("Allow override", e.allow_override, !1, (e) => this.act("override", { allow: e }), "Starting sync may stop another app, like a Hue Sync Box")}
+        </div></ha-card
+      >
     `;
 	}
 	toggle(e, t, n, r, i) {
 		return F`
       <label class="toggle-row" title=${i ?? ""}>
         <span>${e}</span>
-        <input
-          type="checkbox"
-          role="switch"
+        <ha-switch
           .checked=${t}
           ?disabled=${n || this.busy}
           @change=${(e) => r(e.target.checked)}
-        />
+        ></ha-switch>
       </label>
     `;
 	}
 	renderPreview() {
 		let e = this.status, t = e.streaming.target_fps !== null, n = this.brightnessDraft ?? Math.round(this.colors.brightness * 100);
 		return F`
-      <div class="card">
-        <div class="row">
-          <span class="value">Live preview</span>
-          <span class="secondary small">
-            ${t ? "Select a light to paint it." : "Sync is off. Showing the colours sync starts with."}
-          </span>
-        </div>
-        <hue-room-preview
-          .channels=${e.zone_layout?.channels ?? []}
-          .lightInfo=${e.zone_layout?.lights ?? []}
-          .colors=${this.colors.channels}
-          ?active=${t}
-          @paint=${(t) => this.act("colors/set", {
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">Live preview</span>
+            <span class="secondary small">
+              ${t ? "Select a light to paint it." : "Sync is off. Showing the colours sync starts with."}
+            </span>
+          </div>
+          <hue-room-preview
+            .channels=${e.zone_layout?.channels ?? []}
+            .lightInfo=${e.zone_layout?.lights ?? []}
+            .colors=${this.colors.channels}
+            ?active=${t}
+            @paint=${(t) => this.act("colors/set", {
 			channels: Object.fromEntries(t.detail.channels.map((e) => [e, this.paintColor])),
 			overlay: e.scene.id !== null || e.live !== null
 		})}
-        ></hue-room-preview>
-        <div class="row controls">
-          <label class="row">
-            <input
-              type="color"
-              .value=${this.paintColor}
-              @input=${(e) => this.paintColor = e.target.value}
-            />
-            <span class="secondary small">Paint colour</span>
-          </label>
-          <label class="row grow">
-            <span class="secondary small">Brightness</span>
-            <input
-              class="grow"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              .value=${String(n)}
-              @input=${(e) => this.brightnessDraft = Number(e.target.value)}
-              @change=${async (e) => {
+          ></hue-room-preview>
+          <div class="row controls">
+            <label class="row">
+              <input
+                type="color"
+                .value=${this.paintColor}
+                @input=${(e) => this.paintColor = e.target.value}
+              />
+              <span class="secondary small">Paint colour</span>
+            </label>
+            <label class="row grow">
+              <span class="secondary small">Brightness</span>
+              <ha-slider
+                class="grow"
+                min="0"
+                max="100"
+                step="1"
+                .value=${n}
+                @input=${(e) => this.brightnessDraft = Number(e.target.value)}
+                @change=${async (e) => {
 			await this.act("colors/set", {
 				brightness: Number(e.target.value) / 100,
 				start: !1
 			}), this.brightnessDraft = void 0;
 		}}
-            />
-            <span class="small">${n}%</span>
-          </label>
-        </div>
-      </div>
+              ></ha-slider>
+              <span class="small">${n}%</span>
+            </label>
+          </div>
+        </div></ha-card
+      >
     `;
 	}
 	renderScenes() {
@@ -1478,21 +1502,47 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
 				this.message = $(e);
 			}
 		}}
+        @download-scene=${(e) => {
+			this.call("scene", { scene: e.detail.scene }).then((t) => {
+				this.downloadJson(`${e.detail.scene}.json`, t);
+			}).catch((e) => {
+				this.message = $(e);
+			});
+		}}
+        @upload-scene=${async (e) => {
+			try {
+				this.scenes = await this.call("scenes/upload", { scene: e.detail.scene }), this.message = void 0;
+			} catch (e) {
+				this.message = $(e);
+			}
+		}}
+        @delete-scene=${async (e) => {
+			if (confirm(`Delete scene ${e.detail.scene}?`)) try {
+				this.scenes = await this.call("scenes/delete", { scene_id: e.detail.scene }), this.message = void 0;
+			} catch (e) {
+				this.message = $(e);
+			}
+		}}
       ></hue-scene-panel>
     `;
 	}
 	renderMessage() {
 		let e = this.status?.live, t = this.message ?? this.status?.streaming.error;
 		return F`
-      ${e ? F`<div class="info">
+      ${e ? F`<div class="live-bar">
               <span
                 >Live control by <b>${e.client}</b> since
                 ${(/* @__PURE__ */ new Date(e.since * 1e3)).toLocaleTimeString()}. Painting draws on
                 top.</span
               >
-              <button ?disabled=${this.busy} @click=${() => this.act("live/revoke")}>
+              <ha-button
+                appearance="accent"
+                size="s"
+                ?disabled=${this.busy}
+                @click=${() => this.act("live/revoke")}
+              >
                 Take over
-              </button>
+              </ha-button>
             </div>` : R}
       ${t ? F`<div class="message" role="alert">${t}</div>` : R}
     `;
@@ -1505,7 +1555,48 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
       background: var(--primary-background-color);
       color: var(--primary-text-color);
     }
+    .card-content {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .row,
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .value {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .secondary {
+      color: var(--secondary-text-color);
+    }
+    .small {
+      font-size: 13px;
+    }
+    select {
+      font: inherit;
+      color: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--secondary-background-color, transparent);
+    }
+    input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
     .toolbar {
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -1513,6 +1604,7 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
       padding: 0 12px;
       background: var(--app-header-background-color, var(--primary-color));
       color: var(--app-header-text-color, var(--text-primary-color));
+      border-bottom: var(--app-header-border-bottom);
       font-size: 20px;
     }
     .title {
@@ -1544,48 +1636,14 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
     }
-    .card {
-      background: var(--card-background-color, #fff);
-      border-radius: var(--ha-card-border-radius, 12px);
-      border: 1px solid var(--divider-color);
-      padding: 16px;
-      display: grid;
-      gap: 10px;
-      align-content: start;
-    }
     .label {
       font-size: 13px;
       color: var(--secondary-text-color);
-    }
-    .row,
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .value {
-      font-size: 16px;
-      font-weight: 500;
-    }
-    .secondary {
-      color: var(--secondary-text-color);
-    }
-    .small {
-      font-size: 13px;
     }
     .link {
       font-size: 13px;
       color: var(--primary-color);
       text-decoration: none;
-    }
-    select {
-      font: inherit;
-      color: inherit;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: var(--secondary-background-color, transparent);
     }
     .toggles {
       gap: 14px;
@@ -1593,56 +1651,14 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
     .toggle-row span {
       font-size: 15px;
     }
-    input[role="switch"] {
-      appearance: none;
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      background: var(--disabled-color, #bdbdbd);
-      position: relative;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    input[role="switch"]::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #fff;
-      transition: left 0.15s;
-    }
-    input[role="switch"]:checked {
-      background: var(--primary-color);
-    }
-    input[role="switch"]:checked::after {
-      left: 18px;
-    }
-    input[role="switch"]:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
     .controls {
       flex-wrap: wrap;
     }
     .grow {
       flex: 1;
+      min-width: 0;
     }
-    input[type="color"] {
-      width: 40px;
-      height: 28px;
-      padding: 0;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      background: none;
-      cursor: pointer;
-    }
-    input[type="range"] {
-      accent-color: var(--primary-color);
-    }
-    .info {
+    .live-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1652,21 +1668,16 @@ var Q = "ha_hue_entertainment", Me = `/config/integrations/integration/${Q}`, Ne
       background: rgba(3, 169, 244, 0.12);
       border: 1px solid var(--info-color, #039be5);
     }
-    .info button {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--primary-color);
-      background: var(--primary-color);
-      color: var(--text-primary-color, #fff);
-      cursor: pointer;
-    }
     .message {
       padding: 10px 14px;
       border-radius: 8px;
       background: rgba(255, 166, 0, 0.15);
       border: 1px solid var(--warning-color, #ffa600);
+    }
+    ha-button {
+      --ha-icon-button-size: 24px;
+      --mdc-icon-button-size: 24px;
+      --mdc-icon-size: 16px;
     }
   `;
 	}

@@ -63,6 +63,31 @@ class HueScenePanel extends LitElement {
     this.fire("reload-scenes");
   }
 
+  private downloadScene(scene: SceneInfo) {
+    this.fire("download-scene", { scene: scene.id });
+  }
+
+  private uploadScene() {
+    const input = this.shadowRoot?.getElementById("scene-upload") as HTMLInputElement;
+    input?.click();
+  }
+
+  private handleUpload(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (!input.files?.length) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const scene = JSON.parse(reader.result as string);
+        this.fire("upload-scene", { scene });
+      } catch (err) {
+        console.error("Failed to parse scene file", err);
+      }
+    };
+    reader.readAsText(file);
+  }
+
   render() {
     const scene = this.current;
     return html`
@@ -75,76 +100,99 @@ class HueScenePanel extends LitElement {
   private renderList() {
     const speed = this.speedDraft ?? this.speed;
     return html`
-      <div class="card">
-        <div class="row">
-          <span class="value">Scenes</span>
-          <span>
-            <button
-              @click=${(e: Event) => {
-                e.stopPropagation();
-                this.reloadScenes();
-              }}
-            >
-              Reload Scenes
-            </button>
-            <span class="secondary small">${this.scenes.length} available</span>
-          </span>
-        </div>
-        <div class="list">
-          ${this.scenes.map((s) => {
-            const on = s.id === this.playing;
-            return html`
-              <div
-                class="scene ${on ? "on" : ""} ${
-                  s.id === this.current?.id ? "selected" : ""
-                }"
-                @click=${() => (this.selected = s.id)}
+      <input
+        type="file"
+        id="scene-upload"
+        accept=".json"
+        style="display: none"
+        @change=${(e: Event) => this.handleUpload(e)}
+      />
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">Scenes</span>
+            <span>
+              <ha-button
+                appearance="plain"
+                variant="secondary"
+                size="xs"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.reloadScenes();
+                }}
               >
-                <div class="info">
-                  <div class="name">${s.name}</div>
-                  ${
-                    s.description
-                      ? html`<div class="secondary small">${s.description}</div>`
-                      : nothing
-                  }
-                </div>
-                <span class="tag">${s.builtin ? "built-in" : "yours"}</span>
-                <button
-                  class=${on ? "stop" : "play"}
-                  ?disabled=${this.disabled}
-                  @click=${(e: Event) => {
-                    e.stopPropagation();
-                    if (on) this.fire("stop");
-                    else this.play(s, this.drafts[s.id] ? this.values(s) : undefined);
-                  }}
+                <ha-icon icon="mdi:reload"></ha-icon>
+              </ha-button>
+              <ha-button
+                appearance="filled"
+                variant="brand"
+                size="xs"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.uploadScene();
+                }}
+              >
+                <ha-icon icon="mdi:upload"></ha-icon>
+                Upload Scene
+              </ha-button>
+            </span>
+          </div>
+          <div class="list">
+            ${this.scenes.map((s) => {
+              const on = s.id === this.playing;
+              return html`
+                <div
+                  class="scene ${on ? "on" : ""} ${
+                    s.id === this.current?.id ? "selected" : ""
+                  }"
+                  @click=${() => (this.selected = s.id)}
                 >
-                  ${on ? "Stop" : "Play"}
-                </button>
-              </div>
-            `;
-          })}
-        </div>
-        <label class="row speed">
-          <span class="secondary small">Speed</span>
-          <input
-            type="range"
-            min="0.1"
-            max="4"
-            step="0.1"
-            .value=${String(speed)}
-            ?disabled=${this.disabled}
-            @input=${(e: Event) =>
-              (this.speedDraft = Number((e.target as HTMLInputElement).value))}
-            @change=${(e: Event) => {
-              this.fire("speed", {
-                speed: Number((e.target as HTMLInputElement).value),
-              });
-              this.speedDraft = undefined;
-            }}
-          />
-          <span class="small">${speed.toFixed(1)}×</span>
-        </label>
-      </div>
+                  <div class="scene-text">
+                    <div class="name">${s.name}</div>
+                    ${
+                      s.description
+                        ? html`<div class="secondary small">${s.description}</div>`
+                        : nothing
+                    }
+                  </div>
+                  <span class="tag">${s.builtin ? "built-in" : "yours"}</span>
+                  <ha-button
+                    size="xs"
+                    appearance=${on ? "accent" : "outlined"}
+                    ?disabled=${this.disabled}
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      if (on) this.fire("stop");
+                      else this.play(s, this.drafts[s.id] ? this.values(s) : undefined);
+                    }}
+                  >
+                    ${on ? "Stop" : "Play"}
+                  </ha-button>
+                </div>
+              `;
+            })}
+          </div>
+          <label class="row speed">
+            <span class="secondary small">Speed</span>
+            <ha-slider
+              min="0.1"
+              max="4"
+              step="0.1"
+              .value=${speed}
+              ?disabled=${this.disabled}
+              @input=${(e: Event) =>
+                (this.speedDraft = Number((e.target as HTMLInputElement).value))}
+              @change=${(e: Event) => {
+                this.fire("speed", {
+                  speed: Number((e.target as HTMLInputElement).value),
+                });
+                this.speedDraft = undefined;
+              }}
+            ></ha-slider>
+            <span class="small">${speed.toFixed(1)}×</span>
+          </label>
+        </div></ha-card
+      >
     `;
   }
 
@@ -152,41 +200,65 @@ class HueScenePanel extends LitElement {
     const entries = Object.entries(scene.parameters);
     const values = this.values(scene);
     return html`
-      <div class="card">
-        <div class="row">
-          <span class="value">${scene.name}</span>
-          <span class="secondary small">
-            ${scene.author ? `by ${scene.author}` : ""}
-            ${scene.duration ? ` · plays ${scene.duration} s` : ""}
-          </span>
-        </div>
-        ${
-          entries.length
-            ? html`<div class="form">
-                ${entries.map(([name, p]) => this.field(scene, name, p, values[name]))}
-              </div>`
-            : html`<div class="secondary small">This scene has no settings.</div>`
-        }
-        <div class="row actions">
-          <button
-            ?disabled=${!this.drafts[scene.id]}
-            @click=${() => {
-              const rest = { ...this.drafts };
-              delete rest[scene.id];
-              this.drafts = rest;
-            }}
-          >
-            Reset
-          </button>
-          <button
-            class="primary"
-            ?disabled=${this.disabled}
-            @click=${() => this.play(scene, values)}
-          >
-            ${scene.id === this.playing ? "Apply" : "Play with these"}
-          </button>
-        </div>
-      </div>
+      <ha-card
+        ><div class="card-content">
+          <div class="row">
+            <span class="value">${scene.name}</span>
+            <div class="row actions">
+              <ha-icon-button
+                .label=${"Download"}
+                @click=${() => this.downloadScene(scene)}
+              >
+                <ha-icon icon="mdi:download"></ha-icon>
+              </ha-icon-button>
+              ${
+                scene.builtin
+                  ? nothing
+                  : html`
+                      <ha-button
+                        size="xs"
+                        appearance="plain"
+                        variant="danger"
+                        @click=${() => this.fire("delete-scene", { scene: scene.id })}
+                      >
+                        <ha-icon icon="mdi:delete"></ha-icon>
+                        Delete</ha-button
+                      >
+                    `
+              }
+            </div>
+          </div>
+          ${
+            entries.length
+              ? html`<div class="form">
+                  ${entries.map(([name, p]) => this.field(scene, name, p, values[name]))}
+                </div>`
+              : html`<div class="secondary small">This scene has no settings.</div>`
+          }
+          <div class="row actions">
+            <ha-button
+              size="s"
+              appearance="plain"
+              ?disabled=${!this.drafts[scene.id]}
+              @click=${() => {
+                const rest = { ...this.drafts };
+                delete rest[scene.id];
+                this.drafts = rest;
+              }}
+            >
+              Reset
+            </ha-button>
+            <ha-button
+              size="s"
+              appearance="accent"
+              ?disabled=${this.disabled}
+              @click=${() => this.play(scene, values)}
+            >
+              ${scene.id === this.playing ? "Apply" : "Play with these"}
+            </ha-button>
+          </div>
+        </div></ha-card
+      >
     `;
   }
 
@@ -213,14 +285,13 @@ class HueScenePanel extends LitElement {
       return html`
         <label class="field">
           <span>${label}</span>
-          <input
-            type="range"
+          <ha-slider
             min=${min}
             max=${max}
             step=${step}
-            .value=${String(num)}
+            .value=${num}
             @input=${(e: Event) => set(Number((e.target as HTMLInputElement).value))}
-          />
+          ></ha-slider>
           <span class="small num">${formatNumber(num)}</span>
         </label>
       `;
@@ -230,12 +301,10 @@ class HueScenePanel extends LitElement {
       return html`
         <label class="field">
           <span>${label}</span>
-          <input
-            type="checkbox"
-            role="switch"
+          <ha-switch
             .checked=${Boolean(value)}
             @change=${(e: Event) => set((e.target as HTMLInputElement).checked)}
-          />
+          ></ha-switch>
         </label>
       `;
     }
@@ -256,19 +325,11 @@ class HueScenePanel extends LitElement {
   }
 
   static styles = css`
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: var(--card-background-color, #fff);
-      border-radius: var(--ha-card-border-radius, 12px);
-      border: 1px solid var(--divider-color);
+    .card-content {
       padding: 16px;
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 12px;
-      align-content: start;
     }
     .row,
     .field {
@@ -286,6 +347,28 @@ class HueScenePanel extends LitElement {
     }
     .small {
       font-size: 13px;
+    }
+    select {
+      font: inherit;
+      color: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--secondary-background-color, transparent);
+    }
+    input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
     }
     .list {
       display: grid;
@@ -306,7 +389,7 @@ class HueScenePanel extends LitElement {
       color: var(--primary-color);
       font-weight: 500;
     }
-    .info {
+    .scene-text {
       flex: 1;
       min-width: 0;
     }
@@ -314,28 +397,15 @@ class HueScenePanel extends LitElement {
       font-size: 12px;
       color: var(--secondary-text-color);
     }
-    button {
-      font: inherit;
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: none;
-      color: var(--primary-text-color);
-      cursor: pointer;
+    ha-icon-button,
+    ha-button {
+      --ha-icon-button-size: 24px;
+      --mdc-icon-button-size: 24px;
+      --mdc-icon-size: 16px;
     }
-    button.primary,
-    button.stop {
-      background: var(--primary-color);
-      border-color: var(--primary-color);
-      color: var(--text-primary-color, #fff);
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .speed input {
+    .speed ha-slider {
       flex: 1;
+      min-width: 0;
     }
     .form {
       display: grid;
@@ -347,8 +417,9 @@ class HueScenePanel extends LitElement {
       text-transform: capitalize;
       min-width: 90px;
     }
-    .field input[type="range"] {
+    .field ha-slider {
       flex: 1;
+      min-width: 0;
     }
     .num {
       min-width: 36px;
@@ -356,52 +427,7 @@ class HueScenePanel extends LitElement {
     }
     .actions {
       justify-content: flex-end;
-    }
-    input[type="range"] {
-      accent-color: var(--primary-color);
-    }
-    input[type="color"] {
-      width: 44px;
-      height: 28px;
-      padding: 0;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      background: none;
-      cursor: pointer;
-    }
-    select {
-      font: inherit;
-      color: inherit;
-      padding: 6px;
-      border-radius: 8px;
-      border: 1px solid var(--divider-color);
-      background: var(--secondary-background-color, transparent);
-    }
-    input[role="switch"] {
-      appearance: none;
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      background: var(--disabled-color, #bdbdbd);
-      position: relative;
-      cursor: pointer;
-    }
-    input[role="switch"]::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #fff;
-      transition: left 0.15s;
-    }
-    input[role="switch"]:checked {
-      background: var(--primary-color);
-    }
-    input[role="switch"]:checked::after {
-      left: 18px;
+      gap: 8px;
     }
   `;
 }
