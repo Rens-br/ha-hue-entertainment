@@ -8,6 +8,8 @@ Drive a Philips Hue **entertainment area** from Home Assistant: colours,
 animated scenes that move through the room, and live control from your own
 programs using the fast stream the Hue Sync apps use: about 50 updates a second to the bridge, which updates the lights about 25 times a second.
 
+![panel](<docs/images/panel.png>)
+
 ## What you get
 - **Home Assistant entities** an Entertainment light (with the scenes as effects), the area, scene speed and an allow-override setting.
 - **A sidebar panel** to pick the entertainment area, turn sync on and off, see a live 3D-style view of the room with every light in its place and colour, paint lights, and play scenes with their own settings.
@@ -22,7 +24,6 @@ The following features are currently planned to be added, but might change in th
 - **Custom light positioning:** Allowing to change the light positions from the panel, to be able to place them better, and enable more support for non-square rooms.
 - **Non-entertainment zone lights:** Allowing to add lights that are not in the entertainment zone, while they would be more restricted. (using normal light commands, which the bridge limits to about 10 updates a second)
 - **Additional scene features:** Brightness layers to control brightness from noise.
-- **Scene transitions:** fade into a new scene instead of switching instantly.
 - **Scene sharing:** A scene browser within home-assistant or another easier way to find and share scenes. 
 - **Multiple bridges:** Allowing to add multiple bridges, allowing for larger entertainment zones if possible.
 
@@ -63,8 +64,6 @@ This integration pairs with the bridge separately from Home Assistant's built-in
 Hue integration; both can be used side by side.
 
 ## The panel
-![panel](<docs/images/panel.png>)
-
 - **Sync** and **Allow override** toggles.
 - **Room view**: the area like in the Hue app, with each light on a pole at its height and gradient lights as bars, coloured live. Pick a colour and select a light (or a part of a gradient light) to paint it; set the overall brightness.
 - **Scenes**: play and stop, speed, and a settings form for the selected scene.
