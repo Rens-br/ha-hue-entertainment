@@ -196,6 +196,7 @@ async def ws_scene(hass, engine, msg):
         vol.Optional("params"): dict,
         vol.Optional("speed"): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=4)),
         vol.Optional("start", default=True): bool,
+        vol.Optional("transition"): vol.All(vol.Coerce(float), vol.Range(min=0.1)),
         **ENTRY,
     }
 )
@@ -203,7 +204,7 @@ async def ws_scene(hass, engine, msg):
 async def ws_play_scene(hass, engine, msg):
     if "speed" in msg:
         await engine.set_speed(msg["speed"])
-    await engine.play_scene(msg["scene"], msg.get("params"))
+    await engine.play_scene(msg["scene"], msg.get("params"), msg.get("transition"))
     if msg["start"] and not engine.want_fps:
         await engine.start_stream()
     return _snapshot(engine)

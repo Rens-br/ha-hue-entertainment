@@ -56,6 +56,13 @@ play_scene:
           min: 0.1
           max: 4
           step: 0.1
+    transition:
+      selector:
+        number:
+          min: 0.1
+          max: 300
+          step: 0.1
+          unit_of_measurement: s
 
 stop_scene:
   target:

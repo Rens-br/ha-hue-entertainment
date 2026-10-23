@@ -38,6 +38,7 @@ ATTR_CLEAR_OVERLAY = "clear_overlay"
 ATTR_SCENE = "scene"
 ATTR_PARAMS = "params"
 ATTR_SPEED = "speed"
+ATTR_TRANSITION = "transition"
 
 COLOR = vol.Any(cv.string, [vol.Coerce(float)])
 SET_COLORS_SCHEMA = {
@@ -54,6 +55,7 @@ PLAY_SCENE_SCHEMA = {
     vol.Required(ATTR_SCENE): cv.string,
     vol.Optional(ATTR_PARAMS): dict,
     vol.Optional(ATTR_SPEED): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=4)),
+    vol.Optional(ATTR_TRANSITION): vol.All(vol.Coerce(float), vol.Range(min=0.1)),
 }
 
 
@@ -165,9 +167,14 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.engine.stop_stream()
 
-    async def _play(self, scene_id: str, params: dict | None = None) -> None:
+    async def _play(
+        self,
+        scene_id: str,
+        params: dict | None = None,
+        transition: float | None = None,
+    ) -> None:
         try:
-            await self.engine.play_scene(scene_id, params)
+            await self.engine.play_scene(scene_id, params, transition)
         except (BridgeError, SceneError, ValueError) as err:
             raise ServiceValidationError(str(err)) from err
 
@@ -206,7 +213,11 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
         self.async_write_ha_state()
 
     async def async_play_scene(
-        self, scene: str, params: dict | None = None, speed: float | None = None
+        self,
+        scene: str,
+        params: dict | None = None,
+        speed: float | None = None,
+        transition: float | None = None,
     ) -> None:
         """Play a scene by id or name, with optional parameters; starts sync if it is off."""
         scene_id = (
@@ -218,7 +229,7 @@ class EntertainmentLight(HueEntertainmentEntity, LightEntity, RestoreEntity):
             )
         if speed is not None:
             self.engine.speed = speed
-        await self._play(scene_id, params)
+        await self._play(scene_id, params, transition)
         await self.async_start_sync()
         self.async_write_ha_state()
 

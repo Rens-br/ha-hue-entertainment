@@ -37,6 +37,22 @@ def to_hex(c: Color) -> str:
     return "#" + "".join(f"{round(v * 255):02x}" for v in c)
 
 
+class Fade:
+    """Crossfade from the old run (or a frozen frame) to the scene now playing."""
+
+    def __init__(self, run: SceneRun | None, frame: Frame, seconds: float):
+        self.run, self.frame, self.seconds = run, frame, seconds
+        self.start = time.monotonic()
+
+
+def _mix(a: Frame, b: Frame, t: float) -> Frame:
+    # TODO: lerp in linear light; sRGB midpoints look dim on longer fades
+    return {
+        ch: tuple(x + (y - x) * t for x, y in zip(a.get(ch, c), c, strict=True))
+        for ch, c in b.items()
+    }
+
+
 class HueSyncEngine:
     def __init__(
         self,
@@ -55,36 +71,35 @@ class HueSyncEngine:
         self._app_name = app_name
         self.bridge: HueBridge | None = None
         self.bridge_name: str | None = None
-        self.bridge_info: dict = {}  # /api/config: name, modelid, swversion, …
+        self.bridge_info: dict = {}
         self.zone: dict | None = None
         self.streamer: DtlsStreamer | None = None
         self.frame: Frame = {}
         self.brightness = 1.0
-        self.base_color: Color = (
-            WARM_WHITE  # whole-area colour; what a new stream starts with
-        )
-        self.allow_override = (
-            False  # may a start by the user stop another app's stream?
-        )
+        self.base_color: Color = WARM_WHITE
+        self.allow_override = False
 
-        self.scenes: dict[str, Scene] = {}  # available scenes by id, set by the host
-        self.scene_run: SceneRun | None = None  # the scene playing now
-        self.speed = 1.0  # scene speed multiplier
-        self.overlays: dict[
-            int, tuple[Color, float | None]
-        ] = {}  # ch -> (colour, expires at)
+        # TODO: clear in set_colors when it replaces the scene, and in _load_zone and properly fade in these cases.
+        self._fade: Fade | None = None
+
+        self.scenes: dict[str, Scene] = {}
+        self.scene_run: SceneRun | None = None
+        self.speed = 1.0
+        self.overlays: dict[int, tuple[Color, float | None]] = {}
         self._render_at: float | None = None
+        self._scene_frame: Frame = {}
         self._scene_ended = False
+
         # Live control: one external client drives the frames. Newest wins; the
         # previous holder is told why through its on_lost callback.
         self.live: dict | None = None  # {"id", "name", "since", "on_lost"}
-        self.frame_version = 0  # bumps on every colour change
+        self.frame_version = 0
         self.command_rate = 0.0
         self._cmd_count = 0
         self._cmd_window = time.monotonic()
 
-        self.want_fps: float | None = None  # set while the user wants a stream
-        self.stream_state = "off"  # off | streaming | reconnecting
+        self.want_fps: float | None = None
+        self.stream_state = "off"
         self.last_error: str | None = None
         self._retry_at = 0.0
         self._backoff = WATCHDOG_INTERVAL
@@ -252,16 +267,32 @@ class HueSyncEngine:
     def _current_frame(self):
         """Called by the stream thread for every packet."""
         now = time.monotonic()
+        dt = now - self._render_at if self._render_at is not None else 0.0
+        self._render_at = now
         run = self.scene_run
         if run:
-            dt = now - self._render_at if self._render_at is not None else 0.0
             rendered = run.render(dt, self.speed)
             if rendered is None:  # a play-once scene finished; keep its last frame
                 self.scene_run, self._scene_ended = None, True
             else:
-                self.frame = rendered
+                self.frame = self._scene_frame = rendered
                 self.frame_version += 1
-        self._render_at = now
+        fade = self._fade
+        if fade and fade.run is not run:  # skip until play_scene swaps the new run in
+            t = (now - fade.start) / fade.seconds
+            if t >= 1:
+                self._fade = None
+                self.frame = self._scene_frame
+            else:
+                if fade.run:
+                    old = fade.run.render(dt, self.speed)
+                    if old is None:
+                        fade.run = None
+                    else:
+                        fade.frame = old
+                t = t * t * (3 - 2 * t)  # smoothstep
+                self.frame = _mix(fade.frame, self._scene_frame, t)
+            self.frame_version += 1
         frame = self.frame
         if self.overlays:
             live = {
@@ -466,16 +497,25 @@ class HueSyncEngine:
             raise ValueError(f"unknown scene {scene_id!r}")
         return self.scenes[scene_id]
 
-    async def play_scene(self, scene_id: str, params: dict | None = None) -> None:
+    async def play_scene(
+        self, scene_id: str, params: dict | None = None, transition: float | None = None
+    ) -> None:
         """Play a scene on the selected zone. Starting the stream is up to the caller."""
         if not self.zone:
             raise BridgeError("Select an entertainment zone first")
         scene = self.get_scene(scene_id)
         run = SceneRun(scene, self._positions(), params)
         self._lose_live(f"scene {scene.name!r} was started")
+        self._fade = self._fade_from(transition)
         self.scene_run = run
         self._render_at = None
         await self._notify()
+
+    def _fade_from(self, seconds: float | None) -> Fade | None:
+        if not seconds or seconds <= 0 or not self.streaming:
+            return None
+        run = self.scene_run if self._fade is None else None
+        return Fade(run, dict(self.frame), seconds)
 
     # ---- live control ------------------------------------------------------
 
@@ -486,6 +526,7 @@ class HueSyncEngine:
             raise BridgeError("Select an entertainment zone first")
         self._lose_live(f"{name!r} claimed control")
         self.scene_run = None
+        self._fade = None
         self.live = {
             "id": uuid.uuid4().hex,
             "name": name,
@@ -538,6 +579,7 @@ class HueSyncEngine:
 
     async def stop_scene(self) -> None:
         """Stop the scene; the lights keep its last frame."""
+        self._fade = None
         if self.scene_run:
             self.scene_run = None
             await self._notify()
