@@ -1,8 +1,8 @@
-# Hue Entertainment for Home Assistant
+# Philips Hue Entertainment Streaming for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
-[![Validate](https://github.com/Rens-br/ha-hue-entertainment/actions/workflows/validate.yml/badge.svg)](https://github.com/Rens-br/ha-hue-entertainment/actions/workflows/validate.yml)
-[![License](https://img.shields.io/github/license/Rens-br/ha-hue-entertainment)](LICENSE)
+[![Validate](https://github.com/Rens-br/ha-hue-entertainment-streaming/actions/workflows/validate.yml/badge.svg)](https://github.com/Rens-br/ha-hue-entertainment-streaming/actions/workflows/validate.yml)
+[![License](https://img.shields.io/github/license/Rens-br/ha-hue-entertainment-streaming)](LICENSE)
 
 Drive a Philips Hue **entertainment area** from Home Assistant: colours,
 animated scenes that move through the room, and live control from your own
@@ -37,13 +37,13 @@ The following features are currently planned to be added, but might change in th
 
 ### HACS (recommended)
 
-[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Rens-br&repository=ha-hue-entertainment&category=integration)
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Rens-br&repository=ha-hue-entertainment-streaming&category=integration)
 
 Or by hand:
 
 1. In HACS, open the menu (⋮), **Custom repositories**, add
-   `https://github.com/Rens-br/ha-hue-entertainment` with type **Integration**.
-2. Search for **Hue Entertainment** and download it.
+   `https://github.com/Rens-br/ha-hue-entertainment-streaming` with type **Integration**.
+2. Search for **Philips Hue Entertainment Streaming** and download it.
 3. Restart Home Assistant.
 
 ### Manual
@@ -54,9 +54,9 @@ Or by hand:
 
 ## Configuration
 
-[![Open your Home Assistant instance and start setting up Hue Entertainment.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ha_hue_entertainment)
+[![Open your Home Assistant instance and start setting up Philips Hue Entertainment Streaming.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ha_hue_entertainment)
 
-1. Go to **Settings, Devices and services**. Your bridge usually shows up as a discovered **Hue Entertainment** card; otherwise use **Add integration** and search for it. If the bridge isn't found, enter its IP address.
+1. Go to **Settings, Devices and services**. Your bridge usually shows up as a discovered **Philips Hue Entertainment Streaming** card; otherwise use **Add integration** and search for it. If the bridge isn't found, enter its IP address.
 2. Press the round **link button** on the bridge and select **Submit** within 30 seconds.
 3. Open **Hue Entertainment** in the sidebar (admins only) and pick your entertainment area.
 
@@ -255,7 +255,7 @@ actions:
       custom_components.ha_hue_entertainment: debug
   ```
 
-Report problems on the [issue tracker](https://github.com/Rens-br/ha-hue-entertainment/issues).
+Report problems on the [issue tracker](https://github.com/Rens-br/ha-hue-entertainment-streaming/issues).
 
 ## Development
 

@@ -3,7 +3,7 @@
   "id": "aurora",
   "name": "Aurora",
   "description": "Slow green, teal and violet curtains drifting across the room.",
-  "author": "ha-hue-entertainment",
+  "author": "ha-hue-entertainment-streaming",
   "parameters": {
     "drift": {"type": "number", "default": 0.05, "min": 0.01, "max": 0.5}
   },

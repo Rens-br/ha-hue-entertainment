@@ -3,7 +3,7 @@
   "id": "thunderstorm",
   "name": "Thunderstorm",
   "description": "Dim storm clouds with lightning that strikes somewhere and rolls across the room.",
-  "author": "ha-hue-entertainment",
+  "author": "ha-hue-entertainment-streaming",
   "parameters": {
     "rate": {"type": "number", "default": 0.1, "min": 0, "max": 0.3}
   },

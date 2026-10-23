@@ -3,7 +3,7 @@
   "id": "sweep",
   "name": "Sweep",
   "description": "A band of colour travels across the room.",
-  "author": "ha-hue-entertainment",
+  "author": "ha-hue-entertainment-streaming",
   "parameters": {
     "color": {"type": "color", "default": "#ff7a00"},
     "background": {"type": "color", "default": "#000000"},

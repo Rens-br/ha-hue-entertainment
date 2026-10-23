@@ -1,4 +1,4 @@
-"""Constants for the Hue Entertainment integration."""
+"""Constants for the Philips Hue Entertainment Streaming integration."""
 
 DOMAIN = "ha_hue_entertainment"
 

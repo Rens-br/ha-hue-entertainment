@@ -1,4 +1,4 @@
-"""Hue Entertainment: stream colours and animations to a Hue entertainment area."""
+"""Philips Hue Entertainment Streaming: stream colours and animations to a Hue entertainment area."""
 
 from __future__ import annotations
 
