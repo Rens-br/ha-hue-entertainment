@@ -1,9 +1,6 @@
 {
   "domain": "ha_hue_entertainment",
   "name": "Philips Hue Entertainment Streaming",
-  "categories": [
-    "lighting.lighting_systems"
-  ],
   "codeowners": [
     "@Rens-br"
   ],
